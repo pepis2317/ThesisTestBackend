@@ -16,4 +16,6 @@ public partial class User
     public string Password { get; set; } = null!;
 
     public int? Rating { get; set; }
+
+    public string? Pfp { get; set; }
 }

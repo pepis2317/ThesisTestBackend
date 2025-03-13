@@ -1,7 +1,9 @@
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Services;
+using ThesisTestAPI.Validators.User;
 
 var builder = WebApplication.CreateBuilder(args);
 var configuration = builder.Configuration;
@@ -15,10 +17,18 @@ builder.Services.AddDbContextPool<ThesisDbContext>(options =>
     var conString = configuration.GetConnectionString("SQLServerDB");
     options.UseSqlServer(conString);
 });
+
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddDataProtection();
 builder.Services.AddTransient<UserService>();
+builder.Services.AddSingleton<BlobStorageService>();
+
+builder.Services.AddValidatorsFromAssembly(typeof(UploadPfpValidator).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(UserEditValidator).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(UserLoginValidator).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(UserRegisterValidator).Assembly);
 
 var app = builder.Build();
 

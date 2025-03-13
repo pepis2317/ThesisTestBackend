@@ -43,6 +43,7 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.Password)
                 .HasMaxLength(255)
                 .IsUnicode(false);
+            entity.Property(e => e.Pfp).HasMaxLength(500);
             entity.Property(e => e.Phone)
                 .HasMaxLength(255)
                 .IsUnicode(false);

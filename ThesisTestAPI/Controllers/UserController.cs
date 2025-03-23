@@ -1,7 +1,11 @@
 ﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
+using System.Security.Claims;
+using System.Security.Cryptography;
 using ThesisTestAPI.Models.User;
 using ThesisTestAPI.Services;
 using ThesisTestAPI.Validators.User;
@@ -18,9 +22,10 @@ namespace ThesisTestAPI.Controllers
         private readonly IValidator<UserEditModel> _editValidator;
         private readonly IValidator<UserLoginModel> _loginValidator;
         private readonly IValidator<UserRegisterModel> _registerValidator;
+        
         public UserController(
             UserService service,
-            IValidator<UserLoginModel> loginValidator, 
+            IValidator<UserLoginModel> loginValidator,
             IValidator<UserRegisterModel> registerValidator,
             IValidator<UploadPfpModel> pfpValidator,
             IValidator<UserEditModel> editValidator
@@ -75,7 +80,8 @@ namespace ThesisTestAPI.Controllers
             }
             return Ok(data);
         }
-        [HttpGet("user-login/{Email}/{Password}")]
+        
+        [HttpPost("user-login")]
         public async Task<IActionResult> Login([FromQuery] UserLoginModel request)
         {
             var validation = await _loginValidator.ValidateAsync(request);
@@ -83,10 +89,35 @@ namespace ThesisTestAPI.Controllers
             {
                 return Invalid(string.Join("; ", validation.Errors.Select(e => e.ErrorMessage)));
             }
-            var data = await _service.Login(request.Email, request.Password);
+            var data = await _service.Login(request.Email);
             return Ok(data);
         }
-        
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody]RefreshTokenRequest request)
+        {
+            var data = await _service.RefreshToken(request.RefreshToken);
+            if(data == null)
+            {
+                return Invalid("Expired refresh token");
+            }
+            return Ok(data);
+        }
+        [Authorize]
+        [HttpGet("user-data")]
+        public async Task<IActionResult> GetUserData()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value?? User.FindFirst("UserId")?.Value;
+            
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Invalid("Invalid user id");
+            }
+            var user = await _service.Get(Guid.Parse(userId));
+
+            return Ok(user);
+        }
+
         [HttpPost("register-user")]
         public async Task<IActionResult> Register([FromBody]UserRegisterModel request)
         {

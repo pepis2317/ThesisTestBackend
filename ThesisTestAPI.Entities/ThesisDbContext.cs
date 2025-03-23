@@ -47,6 +47,8 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.Phone)
                 .HasMaxLength(255)
                 .IsUnicode(false);
+            entity.Property(e => e.RefreshToken).HasMaxLength(500);
+            entity.Property(e => e.RefreshTokenExpiryTime).HasColumnType("datetime");
             entity.Property(e => e.UserName)
                 .HasMaxLength(255)
                 .IsUnicode(false);

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.Reflection.Metadata;
+using System.Security.Cryptography;
 using System.Xml.Linq;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Models.User;
@@ -14,12 +15,14 @@ namespace ThesisTestAPI.Services
     {
         private readonly ThesisDbContext _db;
         private readonly BlobStorageService _blobStorageService;
+        private readonly JwtService _jwtService;
         private readonly IDataProtector _protector;
-        public UserService(ThesisDbContext db, BlobStorageService blobStorageService, IDataProtectionProvider provider)
+        public UserService(ThesisDbContext db, BlobStorageService blobStorageService, IDataProtectionProvider provider, JwtService jwtService)
         {
             _db = db;
             _blobStorageService = blobStorageService;
             _protector = provider.CreateProtector("CredentialsProtector");
+            _jwtService = jwtService;
         }
         public async Task<List<UserModel>> Get()
         {
@@ -43,6 +46,7 @@ namespace ThesisTestAPI.Services
 
             return result;
         }
+        
         public async Task<UserModel?>Get(Guid UserId)
         {
             var user = await _db.Users.FirstOrDefaultAsync(q => q.UserId == UserId);
@@ -83,26 +87,50 @@ namespace ThesisTestAPI.Services
                 Pfp = user.Pfp
             };
         }
-        public async Task<UserModel?>Login(string email, string password)
+        private string GenerateRefreshToken()
+        {
+            var randomBytes = new byte[32];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(randomBytes);
+            }
+            return Convert.ToBase64String(randomBytes);
+        }
+        public async Task<LoginResponse?>Login(string email)
         {
             var user = await _db.Users.FirstOrDefaultAsync(q=>q.Email == email);
             if(user == null)
             {
                 return null;
             }
-            if(_protector.Unprotect(user.Password) != password)
+            var token = _jwtService.GenerateToken(user.UserId);
+            var refreshToken = GenerateRefreshToken();
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(1);
+            _db.Users.Update(user);
+            await _db.SaveChangesAsync();
+            return new LoginResponse
+            {
+                Token = token,
+                RefreshToken = refreshToken
+            };
+        }
+        public async Task<LoginResponse?> RefreshToken(string refreshToken)
+        {
+            var user = await _db.Users.FirstOrDefaultAsync(q => q.RefreshToken == refreshToken);
+            if(user == null || user.RefreshTokenExpiryTime < DateTime.UtcNow)
             {
                 return null;
             }
-            var pfp = await PfpHelper(user.Pfp);
-            return new UserModel
+            var newToken = _jwtService.GenerateToken(user.UserId);
+            user.RefreshToken = GenerateRefreshToken();
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(1);
+            _db.Users.Update(user);
+            await _db.SaveChangesAsync();
+            return new LoginResponse
             {
-                UserId = user.UserId,
-                UserName = user.UserName,
-                Email = user.Email,
-                Phone = user.Phone,
-                Rating = user.Rating,
-                Pfp = pfp
+                Token = newToken,
+                RefreshToken = user.RefreshToken
             };
         }
         public async Task<string?> UploadPfp(Guid UserId, Stream imageStream, string fileName, string contentType)

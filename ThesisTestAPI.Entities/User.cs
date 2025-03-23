@@ -18,4 +18,8 @@ public partial class User
     public int? Rating { get; set; }
 
     public string? Pfp { get; set; }
+
+    public string? RefreshToken { get; set; }
+
+    public DateTime? RefreshTokenExpiryTime { get; set; }
 }

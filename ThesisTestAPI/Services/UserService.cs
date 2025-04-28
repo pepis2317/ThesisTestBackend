@@ -24,30 +24,26 @@ namespace ThesisTestAPI.Services
             _protector = provider.CreateProtector("CredentialsProtector");
             _jwtService = jwtService;
         }
-        public async Task<List<UserModel>> Get()
+        public async Task<List<UserResponse>> Get()
         {
             var users = await _db.Users.ToListAsync();
-            // Step 1: Extract profile picture filenames
             var pfpFilenames = users.Select(u => u.Pfp).ToList();
-
-            // Step 2: Batch fetch profile picture URLs (avoid sequential await inside loop)
             var pfpUrls = await Task.WhenAll(pfpFilenames.Select(PfpHelper));
-
-            // Step 3: Construct UserModel list
-            var result = users.Select((user, index) => new UserModel
+            var result = users.Select((user, index) => new UserResponse
             {
                 UserId = user.UserId,
                 UserName = user.UserName,
                 Email = user.Email,
                 Phone = user.Phone,
                 Rating = user.Rating,
-                Pfp = pfpUrls[index]
+                Pfp = pfpUrls[index],
+                Role = user.Role
             }).ToList();
 
             return result;
         }
         
-        public async Task<UserModel?>Get(Guid UserId)
+        public async Task<UserResponse?>Get(Guid UserId)
         {
             var user = await _db.Users.FirstOrDefaultAsync(q => q.UserId == UserId);
             if(user == null)
@@ -55,17 +51,18 @@ namespace ThesisTestAPI.Services
                 return null;
             }
             var pfp = await PfpHelper(user.Pfp);
-            return new UserModel
+            return new UserResponse
             {
                 UserId = user.UserId,
                 UserName = user.UserName,
                 Email = user.Email,
                 Phone = user.Phone,
                 Rating = user.Rating,
-                Pfp = pfp
+                Pfp = pfp,
+                Role = user.Role
             };
         }
-        public async Task<UserModel> Register(UserRegisterModel request)
+        public async Task<UserResponse> Register(UserRegisterRequest request)
         {
             var user = new User
             {
@@ -77,14 +74,15 @@ namespace ThesisTestAPI.Services
             };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
-            return new UserModel
+            return new UserResponse
             {
                 UserId = user.UserId,
                 UserName = user.UserName,
                 Email = user.Email,
                 Phone = user.Phone,
                 Rating = user.Rating,
-                Pfp = user.Pfp
+                Pfp = user.Pfp,
+                Role = user.Role
             };
         }
         private string GenerateRefreshToken()
@@ -106,7 +104,7 @@ namespace ThesisTestAPI.Services
             var token = _jwtService.GenerateToken(user.UserId);
             var refreshToken = GenerateRefreshToken();
             user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(1);
+            user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
             _db.Users.Update(user);
             await _db.SaveChangesAsync();
             return new LoginResponse
@@ -144,7 +142,7 @@ namespace ThesisTestAPI.Services
             {
                 await _blobStorageService.DeletePfpAsync(user.Pfp, "user-pfps");
             }
-            string imageUrl = await _blobStorageService.UploadPfpAsync(imageStream, fileName, contentType, "user-pfps");
+            string imageUrl = await _blobStorageService.UploadImageAsync(imageStream, fileName, contentType, "user-pfps", 200);
             user.Pfp = fileName;
             _db.Users.Update(user);
             await _db.SaveChangesAsync();
@@ -155,7 +153,7 @@ namespace ThesisTestAPI.Services
             string? imageUrl = await _blobStorageService.GetTemporaryImageUrl(fileName, "user-pfps");
             return imageUrl;
         }
-        public async Task<UserModel?> Edit(UserEditModel request)
+        public async Task<UserResponse?> Edit(UserEditRequest request)
         {
             var user = await _db.Users.FirstOrDefaultAsync(q=>q.UserId == request.UserId);
             if (user == null)
@@ -166,17 +164,18 @@ namespace ThesisTestAPI.Services
             user.Email = string.IsNullOrEmpty(request.Email) ? user.Email : request.Email;
             user.Password = string.IsNullOrEmpty(request.Password) ? user.Password : _protector.Protect(request.Password);
             user.Phone = string.IsNullOrEmpty(request.Phone) ? user.Phone : request.Phone;
-            
+            user.Role = string.IsNullOrEmpty(request.Role)? user.Role : request.Role;
             _db.Users.Update(user);
             await _db.SaveChangesAsync();
-            return new UserModel
+            return new UserResponse
             {
                 UserId = user.UserId,
                 UserName = user.UserName,
                 Email = user.Email,
                 Phone = user.Phone,
                 Rating = user.Rating,
-                Pfp = user.Pfp
+                Pfp = user.Pfp,
+                Role = user.Role
             };
         }
     }

@@ -1,4 +1,6 @@
-﻿using FluentValidation;
+﻿using Azure.Core;
+using FluentValidation;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 using ThesisTestAPI.Entities;
@@ -6,7 +8,7 @@ using ThesisTestAPI.Models.User;
 
 namespace ThesisTestAPI.Validators.User
 {
-    public class UserEditValidator : AbstractValidator<UserEditModel>
+    public class UserEditValidator : AbstractValidator<UserEditRequest>
     {
         private readonly ThesisDbContext _db;
         public UserEditValidator(ThesisDbContext db)
@@ -14,34 +16,25 @@ namespace ThesisTestAPI.Validators.User
             _db = db;
             RuleFor(x => x.UserId).NotNull().NotEmpty().WithMessage("User id must be provided");
             RuleFor(x => x.UserId).MustAsync(ValidUserId).WithMessage("Invalid user id");
-            RuleFor(x => x.UserName).MustAsync(IsValidUserName).When(x => !string.IsNullOrEmpty(x.UserName)).WithMessage("Username already in use");
+            RuleFor(x => x).MustAsync(IsValidUserName).When(x => !string.IsNullOrEmpty(x.UserName)).WithMessage("Username already in use");
             RuleFor(x => x.Email).Must(IsValidEmail).When(x => !string.IsNullOrEmpty(x.Email)).WithMessage("Invalid email format");
-            RuleFor(x => x.Email).MustAsync(CheckEmail).When(x => !string.IsNullOrEmpty(x.Email)).WithMessage("Email already in use by another user");
-            RuleFor(x => x.Phone).Must(IsValidPhone).When(x => !string.IsNullOrEmpty(x.Phone)).WithMessage("Invalid phone format");
-            RuleFor(x => x.Phone).MustAsync(CheckPhone).When(x => !string.IsNullOrEmpty(x.Phone)).WithMessage("Phone already in use");
+            RuleFor(x => x).MustAsync(CheckEmail).When(x => !string.IsNullOrEmpty(x.Email)).WithMessage("Email already in use by another user");
+            RuleFor(x => x).MustAsync(CheckPhone).When(x => !string.IsNullOrEmpty(x.Phone)).WithMessage("Phone already in use");
         }
-        private async Task<bool> CheckPhone(string? phone, CancellationToken token)
+        private async Task<bool> CheckPhone(UserEditRequest request, CancellationToken token)
         {
-            var data = await _db.Users.FirstOrDefaultAsync(q => q.Phone == phone, token);
-            if(data != null)
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.Phone == request.Phone, token);
+            if (user != null && (request.UserId != user.UserId))
             {
                 return false;
             }
             return true;
         }
-        private bool IsValidPhone(string? phone)
+
+        private async Task<bool> CheckEmail(UserEditRequest request, CancellationToken token)
         {
-            if(phone == null)
-            {
-                return false;
-            }
-            string pattern = @"^0\d{9,10}$"; // Ensures it starts with 0 and has 10 or 11 digits
-            return Regex.IsMatch(phone, pattern);
-        }
-        private async Task<bool> CheckEmail(string? email, CancellationToken token)
-        {
-            var user = await _db.Users.Where(q => q.Email == email).FirstOrDefaultAsync();
-            if (user != null)
+            var user = await _db.Users.Where(q => q.Email == request.Email).FirstOrDefaultAsync(token);
+            if (user != null && (request.UserId != user.UserId))
             {
                 return false;
             }
@@ -66,10 +59,10 @@ namespace ThesisTestAPI.Validators.User
             }
         }
 
-        private async Task<bool> IsValidUserName(string? username, CancellationToken token)
+        private async Task<bool> IsValidUserName(UserEditRequest request, CancellationToken token)
         {
-            var user = await _db.Users.FirstOrDefaultAsync(x => x.UserName == username);
-            if (user != null)
+            var user = await _db.Users.FirstOrDefaultAsync(x => x.UserName == request.UserName, token);
+            if (user != null && (request.UserId != user.UserId))
             {
                 return false;
             }

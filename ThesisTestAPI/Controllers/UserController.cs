@@ -1,4 +1,5 @@
 ﻿using FluentValidation;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity.Data;
@@ -6,6 +7,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using ThesisTestAPI.Entities;
 using ThesisTestAPI.Models.User;
 using ThesisTestAPI.Services;
 using ThesisTestAPI.Validators.User;
@@ -18,55 +20,32 @@ namespace ThesisTestAPI.Controllers
     public class UserController : ControllerBase
     {
         private readonly UserService _service;
-        private readonly IValidator<UploadPfpModel> _pfpValidator;
-        private readonly IValidator<UserEditModel> _editValidator;
-        private readonly IValidator<UserLoginModel> _loginValidator;
-        private readonly IValidator<UserRegisterModel> _registerValidator;
+        private readonly IMediator _mediator;
         
-        public UserController(
-            UserService service,
-            IValidator<UserLoginModel> loginValidator,
-            IValidator<UserRegisterModel> registerValidator,
-            IValidator<UploadPfpModel> pfpValidator,
-            IValidator<UserEditModel> editValidator
-            )
+        public UserController( IMediator mediator,UserService service)
         {
+            _mediator = mediator;
             _service = service;
-            _loginValidator = loginValidator;
-            _registerValidator = registerValidator;
-            _editValidator = editValidator;
-            _pfpValidator = pfpValidator;
         }
-        private BadRequestObjectResult Invalid(string detail)
+        private ProblemDetails Invalid(string details)
         {
             var problemDetails = new ProblemDetails
             {
                 Type = "http://veryCoolAPI.com/errors/invalid-data",
                 Title = "Invalid Request Data",
-                Detail = detail,
+                Detail = details,
                 Instance = HttpContext.Request.Path
             };
-            return BadRequest(problemDetails);
+            return problemDetails;
         }
-        private BadRequestObjectResult InvalidModelState()
-        {
-            var problemDetails = new ValidationProblemDetails(ModelState)
-            {
-                Type = "http://veryCoolAPI.com/errors/validation-error",
-                Title = "Invalid Request Parameters",
-                Status = StatusCodes.Status400BadRequest,
-                Detail = "Invalid modelState",
-                Instance = HttpContext.Request.Path
-            };
-            return BadRequest(problemDetails);
-        }
+
         [HttpGet("get-all-users")]
         public async Task<IActionResult> Get()
         {
             var data = await _service.Get();
             if (data.IsNullOrEmpty())
             {
-                return Invalid("No users exist");
+                return BadRequest(Invalid("No users exist"));
             }
             return Ok(data);
         }
@@ -76,21 +55,20 @@ namespace ThesisTestAPI.Controllers
             var data = await _service.Get(UserId);
             if(data == null)
             {
-                return Invalid("Invalid user id");
+                return BadRequest(Invalid("Invalid user id"));
             }
             return Ok(data);
         }
         
         [HttpPost("user-login")]
-        public async Task<IActionResult> Login([FromQuery] UserLoginModel request)
+        public async Task<IActionResult> Login([FromQuery] UserLoginRequest request)
         {
-            var validation = await _loginValidator.ValidateAsync(request);
-            if (!validation.IsValid)
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
             {
-                return Invalid(string.Join("; ", validation.Errors.Select(e => e.ErrorMessage)));
+                return BadRequest(result.Item1);
             }
-            var data = await _service.Login(request.Email);
-            return Ok(data);
+            return Ok(result.Item2);
         }
 
         [HttpPost("refresh-token")]
@@ -99,7 +77,7 @@ namespace ThesisTestAPI.Controllers
             var data = await _service.RefreshToken(request.RefreshToken);
             if(data == null)
             {
-                return Invalid("Expired refresh token");
+                return BadRequest(Invalid("Expired refresh token"));
             }
             return Ok(data);
         }
@@ -111,7 +89,7 @@ namespace ThesisTestAPI.Controllers
             
             if (string.IsNullOrEmpty(userId))
             {
-                return Invalid("Invalid user id");
+                return BadRequest(Invalid("User id not found in JWT"));
             }
             var user = await _service.Get(Guid.Parse(userId));
 
@@ -119,54 +97,36 @@ namespace ThesisTestAPI.Controllers
         }
 
         [HttpPost("register-user")]
-        public async Task<IActionResult> Register([FromBody]UserRegisterModel request)
+        public async Task<IActionResult> Register([FromBody]UserRegisterRequest request)
         {
-            if(!ModelState.IsValid)
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
             {
-                return InvalidModelState();
+                return BadRequest(result.Item1);
             }
-            var validation = await _registerValidator.ValidateAsync(request);
-            if (!validation.IsValid)
-            {
-                return Invalid(string.Join("; ", validation.Errors.Select(e => e.ErrorMessage)));
-            }
-            var data = await _service.Register(request);
-            return Ok(data);
+            return Ok(result.Item2);
         }
         
         [HttpPut("edit-user")]
-        public async Task<IActionResult> Edit([FromBody] UserEditModel request)
+        public async Task<IActionResult> Edit([FromBody] UserEditRequest request)
         {
-            if (!ModelState.IsValid)
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
             {
-                return InvalidModelState();
+                return BadRequest(result.Item1);
             }
-            var validation = await _editValidator.ValidateAsync(request);
-            if (!validation.IsValid)
-            {
-                return Invalid(string.Join("; ", validation.Errors.Select(e => e.ErrorMessage)));
-            }
-            var data = await _service.Edit(request);
-            return Ok(data);
+            return Ok(result.Item2);
         }
 
         [HttpPost("upload-pfp")]
-        public async Task<IActionResult> UploadPfp(UploadPfpModel request)
+        public async Task<IActionResult> UploadPfp(UploadPfpRequest request)
         {
-            if (!ModelState.IsValid)
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
             {
-                return InvalidModelState();
+                return BadRequest(result.Item1);
             }
-            var validation = await _pfpValidator.ValidateAsync(request);
-            if (!validation.IsValid)
-            {
-                return Invalid(string.Join("; ", validation.Errors.Select(e => e.ErrorMessage)));
-            }
-            var fileName = $"{Guid.NewGuid()}_{request.file.FileName}";
-            var contentType = request.file.ContentType;
-            using var stream = request.file.OpenReadStream();
-            var imageUrl = await _service.UploadPfp(request.UserId, stream, fileName, contentType);
-            return Ok(new { imageUrl });
+            return Ok(result.Item2);
         }
     }
 }

@@ -6,7 +6,7 @@ using ThesisTestAPI.Models.User;
 
 namespace ThesisTestAPI.Validators.User
 {
-    public class UserLoginValidator:AbstractValidator<UserLoginModel>
+    public class UserLoginValidator:AbstractValidator<UserLoginRequest>
     {
         private readonly ThesisDbContext _db;
         private readonly IDataProtector _protector;
@@ -19,7 +19,7 @@ namespace ThesisTestAPI.Validators.User
             RuleFor(x => x.Email).Must(IsValidEmail).WithMessage("Invalid email format");
             RuleFor(x => x).MustAsync(ValidCredentials).WithMessage("Invalid credentials");
         }
-        private async Task<bool> ValidCredentials(UserLoginModel request, CancellationToken token)
+        private async Task<bool> ValidCredentials(UserLoginRequest request, CancellationToken token)
         {
             var user = await _db.Users.FirstOrDefaultAsync(q => q.Email == request.Email, token);
             if (user == null)

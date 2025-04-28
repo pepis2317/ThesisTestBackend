@@ -5,7 +5,7 @@ using ThesisTestAPI.Models.User;
 
 namespace ThesisTestAPI.Validators.User
 {
-    public class UserRegisterValidator:AbstractValidator<UserRegisterModel>
+    public class UserRegisterValidator:AbstractValidator<UserRegisterRequest>
     {
         private readonly ThesisDbContext _db;
         public UserRegisterValidator(ThesisDbContext db)
@@ -27,7 +27,7 @@ namespace ThesisTestAPI.Validators.User
             }
             return true;
         }
-        private async Task<bool> CheckUniqueEmail(UserRegisterModel request, CancellationToken token)
+        private async Task<bool> CheckUniqueEmail(UserRegisterRequest request, CancellationToken token)
         {
             var user = await _db.Users.Where(q => q.Email == request.Email).FirstOrDefaultAsync();
             if (user != null)

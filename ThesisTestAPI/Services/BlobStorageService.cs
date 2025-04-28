@@ -49,22 +49,19 @@ namespace ThesisTestAPI.Services
             }
             return false;
         }
-        public async Task<string> UploadPfpAsync(Stream imageStream, string fileName, string contentType, string containerName)
+        public async Task<string> UploadImageAsync(Stream imageStream, string fileName, string contentType, string containerName, int targetSize)
         {
             try
             {
-                // Convert stream to an Image object
                 using var image = Image.FromStream(imageStream);
 
                 int width = image.Width;
                 int height = image.Height;
 
-                // Calculate cropping area to make it 1:1 (centered)
                 int size = Math.Min(width, height);
                 int x = (width - size) / 2;
                 int y = (height - size) / 2;
 
-                // Crop to square
                 using var croppedImage = new Bitmap(size, size);
                 using (var graphics = Graphics.FromImage(croppedImage))
                 {
@@ -72,22 +69,22 @@ namespace ThesisTestAPI.Services
                 }
 
                 // Resize to target size (e.g., 200x200)
-                using var resizedImage = new Bitmap(200, 200);
+                using var resizedImage = new Bitmap(targetSize, targetSize);
                 using (var graphics = Graphics.FromImage(resizedImage))
                 {
                     graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    graphics.DrawImage(croppedImage, 0, 0, 200, 200);
+                    graphics.DrawImage(croppedImage, 0, 0, targetSize, targetSize);
                 }
 
-                // Convert resized image to a stream
                 using var memoryStream = new MemoryStream();
-                resizedImage.Save(memoryStream, ImageFormat.Jpeg); // Change format if needed
+                resizedImage.Save(memoryStream, ImageFormat.Jpeg);
                 memoryStream.Position = 0;
 
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
                 await containerClient.CreateIfNotExistsAsync();
                 var blobClient = containerClient.GetBlobClient(fileName);
-                var blobHttpHeaders = new BlobHttpHeaders {
+                var blobHttpHeaders = new BlobHttpHeaders
+                {
                     ContentType = contentType
                 };
                 await blobClient.UploadAsync(memoryStream, blobHttpHeaders);

@@ -7,7 +7,7 @@ using ThesisTestAPI.Models.User;
 
 namespace ThesisTestAPI.Validators.User
 {
-    public class UploadPfpValidator:AbstractValidator<UploadPfpModel>
+    public class UploadPfpValidator:AbstractValidator<UploadPfpRequest>
     {
         private readonly ThesisDbContext _db;
         public UploadPfpValidator(ThesisDbContext db)

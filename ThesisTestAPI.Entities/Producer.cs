@@ -12,13 +12,19 @@ public partial class Producer
 
     public Guid OwnerId { get; set; }
 
-    public int? Rating { get; set; }
-
-    public int? Clients { get; set; }
-
-    public Geometry Location { get; set; } = null!;
+    public Geometry? Location { get; set; }
 
     public string? Banner { get; set; }
 
+    public string? ProducerPicture { get; set; }
+
+    public DateTime? CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
     public virtual User Owner { get; set; } = null!;
+
+    public virtual ICollection<ProducerReview> ProducerReviews { get; set; } = new List<ProducerReview>();
+
+    public virtual ICollection<Request> Requests { get; set; } = new List<Request>();
 }

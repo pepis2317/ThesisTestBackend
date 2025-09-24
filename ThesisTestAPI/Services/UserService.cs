@@ -59,7 +59,7 @@ namespace ThesisTestAPI.Services
                 Phone = user.Phone,
                 Rating = user.Rating,
                 Pfp = pfp,
-                Role = user.Role
+                Role = user.Role,
             };
         }
         public async Task<UserResponse> Register(UserRegisterRequest request)
@@ -140,9 +140,9 @@ namespace ThesisTestAPI.Services
             }
             if(!string.IsNullOrEmpty(user.Pfp))
             {
-                await _blobStorageService.DeletePfpAsync(user.Pfp, "user-pfps");
+                await _blobStorageService.DeleteFileAsync(user.Pfp, Enum.BlobContainers.PFP);
             }
-            string imageUrl = await _blobStorageService.UploadImageAsync(imageStream, fileName, contentType, "user-pfps", 200);
+            string imageUrl = await _blobStorageService.UploadImageAsync(imageStream, fileName, contentType, Enum.BlobContainers.PFP, 200);
             user.Pfp = fileName;
             _db.Users.Update(user);
             await _db.SaveChangesAsync();
@@ -150,7 +150,7 @@ namespace ThesisTestAPI.Services
         }
         private async Task<string?> PfpHelper(string? fileName)
         {
-            string? imageUrl = await _blobStorageService.GetTemporaryImageUrl(fileName, "user-pfps");
+            string? imageUrl = await _blobStorageService.GetTemporaryImageUrl(fileName, Enum.BlobContainers.PFP);
             return imageUrl;
         }
         public async Task<UserResponse?> Edit(UserEditRequest request)
@@ -165,6 +165,7 @@ namespace ThesisTestAPI.Services
             user.Password = string.IsNullOrEmpty(request.Password) ? user.Password : _protector.Protect(request.Password);
             user.Phone = string.IsNullOrEmpty(request.Phone) ? user.Phone : request.Phone;
             user.Role = string.IsNullOrEmpty(request.Role)? user.Role : request.Role;
+            user.UpdatedAt = DateTime.Now;
             _db.Users.Update(user);
             await _db.SaveChangesAsync();
             return new UserResponse

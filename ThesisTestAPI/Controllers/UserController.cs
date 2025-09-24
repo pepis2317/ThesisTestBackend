@@ -61,7 +61,7 @@ namespace ThesisTestAPI.Controllers
         }
         
         [HttpPost("user-login")]
-        public async Task<IActionResult> Login([FromQuery] UserLoginRequest request)
+        public async Task<IActionResult> Login([FromQuery]UserLoginRequest request)
         {
             var result = await _mediator.Send(request);
             if (result.Item1 != null)

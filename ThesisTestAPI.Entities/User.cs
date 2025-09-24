@@ -25,5 +25,21 @@ public partial class User
 
     public string? Role { get; set; }
 
+    public DateTime? CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
+
+    public virtual ICollection<Content> Contents { get; set; } = new List<Content>();
+
+    public virtual ICollection<ConversationMember> ConversationMembers { get; set; } = new List<ConversationMember>();
+
+    public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+
     public virtual ICollection<Producer> Producers { get; set; } = new List<Producer>();
+
+    public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
+
+    public virtual ICollection<UserReview> UserReviews { get; set; } = new List<UserReview>();
+
+    public virtual ICollection<Wallet> Wallets { get; set; } = new List<Wallet>();
 }

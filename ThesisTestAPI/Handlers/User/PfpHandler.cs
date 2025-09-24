@@ -31,9 +31,9 @@ namespace ThesisTestAPI.Handlers.User
                 };
                 return (problemDetails, null);
             }
-            var fileName = $"{Guid.NewGuid()}_{request.file.FileName}";
-            var contentType = request.file.ContentType;
-            using var stream = request.file.OpenReadStream();
+            var fileName = $"{Guid.NewGuid()}_{request.File.FileName}";
+            var contentType = request.File.ContentType;
+            using var stream = request.File.OpenReadStream();
             var imageUrl = await _service.UploadPfp(request.UserId, stream, fileName, contentType);
             return (null, imageUrl);
         }

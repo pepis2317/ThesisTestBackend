@@ -11,7 +11,7 @@ namespace ThesisTestAPI.Services
         private readonly string _key = config["Jwt:Key"];
         private readonly string _issuer = config["Jwt:Issuer"];
         private readonly string _audience = config["Jwt:Audience"];
-        private readonly int _expirationMinutes = int.Parse(config["Jwt:ExpirationInMinutes"]);
+        private readonly int _expirationDays = int.Parse(config["Jwt:ExpirationInDays"]);
 
         public string GenerateToken(Guid? UserId)
         {
@@ -27,7 +27,7 @@ namespace ThesisTestAPI.Services
                 _issuer,
                 _audience,
                 claims,
-                expires: DateTime.UtcNow.AddMinutes(_expirationMinutes),
+                expires: DateTime.UtcNow.AddDays(_expirationDays),
                 signingCredentials: credentials
             );
 

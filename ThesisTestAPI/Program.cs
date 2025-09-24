@@ -13,6 +13,8 @@ using System.Text;
 using ThesisTestAPI;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Services;
+using ThesisTestAPI.Validators.Post;
+using ThesisTestAPI.Validators.Producer;
 using ThesisTestAPI.Validators.User;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -55,6 +57,11 @@ builder.Services.AddTransient<UserService>();
 builder.Services.AddTransient<ProducerService>();
 builder.Services.AddSingleton<BlobStorageService>();
 builder.Services.AddSingleton<JwtService>();
+builder.Services.AddTransient<LikesService>();
+builder.Services.AddTransient<PostService>();
+builder.Services.AddTransient<ImageService>();
+builder.Services.AddTransient<MessageAttachmentService>();
+builder.Services.AddTransient<RatingService>(); 
 builder.Services.AddScoped<IXmlRepository, DatabaseXmlRepository>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDataProtection()
@@ -70,9 +77,15 @@ builder.Services.AddValidatorsFromAssembly(typeof(UploadPfpValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(UserEditValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(UserLoginValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(UserRegisterValidator).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(ProducerQueryValidator).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(GetCursorPostValidator).Assembly);
 builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+});
+builder.WebHost.ConfigureKestrel(options =>
+{
+    options.Limits.MaxRequestBodySize = 52428800; // 50 MB, adjust as needed
 });
 builder.Services.AddCors(options =>
 {
@@ -87,9 +100,11 @@ builder.WebHost.ConfigureKestrel(options =>
 {
     options.ListenAnyIP(5026); // Allows connections from any IP
 });
+builder.Services.AddSignalR().AddAzureSignalR(builder.Configuration["Azure:SignalR:ConnectionString"]);
 
 var app = builder.Build();
 app.UseCors("AllowAll");
+app.MapHub<ChatHub>("/hubs/chat");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

@@ -15,8 +15,8 @@ namespace ThesisTestAPI.Validators.User
             _db = db;
             RuleFor(x => x.UserId).NotNull().NotEmpty().WithMessage("User id must be provided");
             RuleFor(x => x.UserId).MustAsync(ValidUserId).WithMessage("Invalid user id");
-            RuleFor(x => x.file).NotNull().NotEmpty().WithMessage("Image file must be provided");
-            RuleFor(x => x.file).Must(ValidImage).WithMessage("Invalid file format");
+            RuleFor(x => x.File).NotNull().NotEmpty().WithMessage("Image file must be provided");
+            //RuleFor(x => x.file).Must(ValidImage).WithMessage("Invalid file format");
         }
         private async Task<bool> ValidUserId(Guid UserId, CancellationToken token)
         {
@@ -54,7 +54,7 @@ namespace ThesisTestAPI.Validators.User
 
             try
             {
-                using var image = Image.FromStream(file.OpenReadStream());
+                using var image = System.Drawing.Image.FromStream(file.OpenReadStream());
                 return image.RawFormat.Equals(ImageFormat.Jpeg) ||
                        image.RawFormat.Equals(ImageFormat.Png) ||
                        image.RawFormat.Equals(ImageFormat.Bmp) ||

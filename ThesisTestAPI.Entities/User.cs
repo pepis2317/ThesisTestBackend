@@ -35,9 +35,9 @@ public partial class User
 
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
-    public virtual ICollection<Producer> Producers { get; set; } = new List<Producer>();
-
     public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
+
+    public virtual ICollection<Seller> Sellers { get; set; } = new List<Seller>();
 
     public virtual ICollection<UserReview> UserReviews { get; set; } = new List<UserReview>();
 

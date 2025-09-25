@@ -25,16 +25,16 @@ namespace ThesisTestAPI.Handlers.Review
             var reviewsList = new List<ReviewResponse>();
             if (myReviews.Count() > 0)
             {
-                var producer = await _db.Producers.Where(q => q.ProducerId == request.AuthorId).FirstOrDefaultAsync();
-                var authorPfp = await _blobStorageService.GetTemporaryImageUrl(producer.ProducerPicture, Enum.BlobContainers.PRODUCERPICTURE);
+                var Seller = await _db.Sellers.Where(q => q.SellerId == request.AuthorId).FirstOrDefaultAsync();
+                var authorPfp = await _blobStorageService.GetTemporaryImageUrl(Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
                 foreach (var review in myReviews)
                 {
                     var comments = await _db.Comments.Where(q => q.CommentNavigation.ContentId == review.UserReviewId).CountAsync();
                     var reviewResponse = new ReviewResponse
                     {
                         ReviewId = review.UserReviewId,
-                        AuthorId = producer.ProducerId,
-                        AuthorName = producer.ProducerName,
+                        AuthorId = Seller.SellerId,
+                        AuthorName = Seller.SellerName,
                         AuthorPfp = authorPfp,
                         Review = review.Review,
                         CreatedAt = review.UserReviewNavigation.CreatedAt,
@@ -46,13 +46,13 @@ namespace ThesisTestAPI.Handlers.Review
             }
             foreach (var review in otherReviews)
             {
-                var producer = await _db.Producers.Where(q => q.ProducerId == request.AuthorId).FirstOrDefaultAsync();
-                var authorPfp = await _blobStorageService.GetTemporaryImageUrl(producer.ProducerPicture, Enum.BlobContainers.PRODUCERPICTURE);
+                var Seller = await _db.Sellers.Where(q => q.SellerId == request.AuthorId).FirstOrDefaultAsync();
+                var authorPfp = await _blobStorageService.GetTemporaryImageUrl(Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
                 var comments = await _db.Comments.Where(q => q.CommentNavigation.ContentId == review.UserReviewId).CountAsync();
                 var reviewResponse = new ReviewResponse
                 {
-                    AuthorId = producer.ProducerId,
-                    AuthorName = producer.ProducerName,
+                    AuthorId = Seller.SellerId,
+                    AuthorName = Seller.SellerName,
                     AuthorPfp = authorPfp,
                     Review = review.Review,
                     CreatedAt = review.UserReviewNavigation.CreatedAt,

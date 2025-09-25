@@ -7,7 +7,7 @@ public partial class Request
 {
     public Guid RequestId { get; set; }
 
-    public Guid ProducerId { get; set; }
+    public Guid SellerId { get; set; }
 
     public string RequestMessage { get; set; } = null!;
 
@@ -17,7 +17,7 @@ public partial class Request
 
     public virtual ICollection<Process> Processes { get; set; } = new List<Process>();
 
-    public virtual Producer Producer { get; set; } = null!;
-
     public virtual Content RequestNavigation { get; set; } = null!;
+
+    public virtual Seller Seller { get; set; } = null!;
 }

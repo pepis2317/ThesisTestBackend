@@ -367,7 +367,6 @@ public partial class ThesisDbContext : DbContext
 
             entity.HasOne(d => d.Transaction).WithMany(p => p.Steps)
                 .HasForeignKey(d => d.TransactionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Steps__Transacti__1D7B6025");
         });
 

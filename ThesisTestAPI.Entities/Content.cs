@@ -23,11 +23,11 @@ public partial class Content
 
     public virtual Post? Post { get; set; }
 
-    public virtual ProducerReview? ProducerReview { get; set; }
-
     public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
 
     public virtual Request? Request { get; set; }
+
+    public virtual SellerReview? SellerReview { get; set; }
 
     public virtual Step? Step { get; set; }
 

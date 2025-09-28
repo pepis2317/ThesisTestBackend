@@ -15,19 +15,19 @@ public partial class Step
 
     public Guid TransactionId { get; set; }
 
-    public DateTime MinCompleteEstimate { get; set; }
+    public DateTimeOffset MinCompleteEstimate { get; set; }
 
-    public DateTime MaxCompleteEstimate { get; set; }
+    public DateTimeOffset MaxCompleteEstimate { get; set; }
 
-    public DateTime? CompletedDate { get; set; }
+    public DateTimeOffset? CompletedDate { get; set; }
 
-    public Guid NextStepId { get; set; }
+    public Guid? NextStepId { get; set; }
 
     public string? Status { get; set; }
 
     public virtual ICollection<Step> InverseNextStep { get; set; } = new List<Step>();
 
-    public virtual Step NextStep { get; set; } = null!;
+    public virtual Step? NextStep { get; set; }
 
     public virtual Process Process { get; set; } = null!;
 

@@ -54,7 +54,7 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddTransient<UserService>();
-builder.Services.AddTransient<ProducerService>();
+builder.Services.AddTransient<SellerService>();
 builder.Services.AddSingleton<BlobStorageService>();
 builder.Services.AddSingleton<JwtService>();
 builder.Services.AddTransient<LikesService>();
@@ -77,7 +77,7 @@ builder.Services.AddValidatorsFromAssembly(typeof(UploadPfpValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(UserEditValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(UserLoginValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(UserRegisterValidator).Assembly);
-builder.Services.AddValidatorsFromAssembly(typeof(ProducerQueryValidator).Assembly);
+builder.Services.AddValidatorsFromAssembly(typeof(SellerQueryValidator).Assembly);
 builder.Services.AddValidatorsFromAssembly(typeof(GetCursorPostValidator).Assembly);
 builder.Services.AddMediatR(cfg =>
 {

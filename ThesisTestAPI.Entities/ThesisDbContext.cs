@@ -37,15 +37,15 @@ public partial class ThesisDbContext : DbContext
 
     public virtual DbSet<Process> Processes { get; set; }
 
-    public virtual DbSet<Producer> Producers { get; set; }
-
-    public virtual DbSet<ProducerReview> ProducerReviews { get; set; }
-
     public virtual DbSet<Rating> Ratings { get; set; }
 
     public virtual DbSet<Reaction> Reactions { get; set; }
 
     public virtual DbSet<Request> Requests { get; set; }
+
+    public virtual DbSet<Seller> Sellers { get; set; }
+
+    public virtual DbSet<SellerReview> SellerReviews { get; set; }
 
     public virtual DbSet<Step> Steps { get; set; }
 
@@ -240,50 +240,6 @@ public partial class ThesisDbContext : DbContext
                 .HasConstraintName("FK__Processes__Reque__74794A92");
         });
 
-        modelBuilder.Entity<Producer>(entity =>
-        {
-            entity.HasKey(e => e.ProducerId).HasName("PK__Producer__13369652E029C705");
-
-            entity.HasIndex(e => e.ProducerName, "UQ__Producer__E0E723B8321AB5E4").IsUnique();
-
-            entity.Property(e => e.ProducerId).ValueGeneratedNever();
-            entity.Property(e => e.Banner)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
-            entity.Property(e => e.ProducerName)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.ProducerPicture)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
-
-            entity.HasOne(d => d.Owner).WithMany(p => p.Producers)
-                .HasForeignKey(d => d.OwnerId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__Producers__Owner__07C12930");
-        });
-
-        modelBuilder.Entity<ProducerReview>(entity =>
-        {
-            entity.HasKey(e => e.ProducerReviewId).HasName("PK__Producer__8AA2C4138B0CED33");
-
-            entity.Property(e => e.ProducerReviewId).ValueGeneratedNever();
-            entity.Property(e => e.Review)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-
-            entity.HasOne(d => d.Producer).WithMany(p => p.ProducerReviews)
-                .HasForeignKey(d => d.ProducerId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__ProducerR__Produ__6CD828CA");
-
-            entity.HasOne(d => d.ProducerReviewNavigation).WithOne(p => p.ProducerReview)
-                .HasForeignKey<ProducerReview>(d => d.ProducerReviewId)
-                .HasConstraintName("FK__ProducerR__Produ__6BE40491");
-        });
-
         modelBuilder.Entity<Rating>(entity =>
         {
             entity.HasKey(e => e.RatingId).HasName("PK__Ratings__FCCDF87C3FB1462B");
@@ -327,13 +283,57 @@ public partial class ThesisDbContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(false);
 
-            entity.HasOne(d => d.Producer).WithMany(p => p.Requests)
-                .HasForeignKey(d => d.ProducerId)
-                .HasConstraintName("FK__Requests__Produc__70A8B9AE");
-
             entity.HasOne(d => d.RequestNavigation).WithOne(p => p.Request)
                 .HasForeignKey<Request>(d => d.RequestId)
                 .HasConstraintName("FK__Requests__Reques__6FB49575");
+
+            entity.HasOne(d => d.Seller).WithMany(p => p.Requests)
+                .HasForeignKey(d => d.SellerId)
+                .HasConstraintName("FK__Requests__Produc__70A8B9AE");
+        });
+
+        modelBuilder.Entity<Seller>(entity =>
+        {
+            entity.HasKey(e => e.SellerId).HasName("PK__Producer__13369652E029C705");
+
+            entity.HasIndex(e => e.SellerName, "UQ__Producer__E0E723B8321AB5E4").IsUnique();
+
+            entity.Property(e => e.SellerId).ValueGeneratedNever();
+            entity.Property(e => e.Banner)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.SellerName)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.SellerPicture)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.UpdatedAt).HasColumnType("datetime");
+
+            entity.HasOne(d => d.Owner).WithMany(p => p.Sellers)
+                .HasForeignKey(d => d.OwnerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Producers__Owner__07C12930");
+        });
+
+        modelBuilder.Entity<SellerReview>(entity =>
+        {
+            entity.HasKey(e => e.SellerReviewId).HasName("PK__Producer__8AA2C4138B0CED33");
+
+            entity.Property(e => e.SellerReviewId).ValueGeneratedNever();
+            entity.Property(e => e.Review)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.Seller).WithMany(p => p.SellerReviews)
+                .HasForeignKey(d => d.SellerId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__ProducerR__Produ__6CD828CA");
+
+            entity.HasOne(d => d.SellerReviewNavigation).WithOne(p => p.SellerReview)
+                .HasForeignKey<SellerReview>(d => d.SellerReviewId)
+                .HasConstraintName("FK__ProducerR__Produ__6BE40491");
         });
 
         modelBuilder.Entity<Step>(entity =>
@@ -341,12 +341,9 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.StepId).HasName("PK__Steps__24343357128540E3");
 
             entity.Property(e => e.StepId).ValueGeneratedNever();
-            entity.Property(e => e.CompletedDate).HasColumnType("datetime");
             entity.Property(e => e.Description)
                 .HasMaxLength(255)
                 .IsUnicode(false);
-            entity.Property(e => e.MaxCompleteEstimate).HasColumnType("datetime");
-            entity.Property(e => e.MinCompleteEstimate).HasColumnType("datetime");
             entity.Property(e => e.Status)
                 .HasMaxLength(255)
                 .IsUnicode(false);
@@ -356,7 +353,6 @@ public partial class ThesisDbContext : DbContext
 
             entity.HasOne(d => d.NextStep).WithMany(p => p.InverseNextStep)
                 .HasForeignKey(d => d.NextStepId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Steps__NextStepI__1E6F845E");
 
             entity.HasOne(d => d.Process).WithMany(p => p.Steps)

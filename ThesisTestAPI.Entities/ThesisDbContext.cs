@@ -341,12 +341,9 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.StepId).HasName("PK__Steps__24343357128540E3");
 
             entity.Property(e => e.StepId).ValueGeneratedNever();
-            entity.Property(e => e.CompletedDate).HasColumnType("datetime");
             entity.Property(e => e.Description)
                 .HasMaxLength(255)
                 .IsUnicode(false);
-            entity.Property(e => e.MaxCompleteEstimate).HasColumnType("datetime");
-            entity.Property(e => e.MinCompleteEstimate).HasColumnType("datetime");
             entity.Property(e => e.Status)
                 .HasMaxLength(255)
                 .IsUnicode(false);
@@ -356,7 +353,6 @@ public partial class ThesisDbContext : DbContext
 
             entity.HasOne(d => d.NextStep).WithMany(p => p.InverseNextStep)
                 .HasForeignKey(d => d.NextStepId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Steps__NextStepI__1E6F845E");
 
             entity.HasOne(d => d.Process).WithMany(p => p.Steps)

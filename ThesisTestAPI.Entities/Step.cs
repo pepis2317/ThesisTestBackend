@@ -13,7 +13,7 @@ public partial class Step
 
     public string Description { get; set; } = null!;
 
-    public Guid TransactionId { get; set; }
+    public Guid? TransactionId { get; set; }
 
     public DateTimeOffset MinCompleteEstimate { get; set; }
 
@@ -33,5 +33,5 @@ public partial class Step
 
     public virtual Content StepNavigation { get; set; } = null!;
 
-    public virtual WalletTransaction Transaction { get; set; } = null!;
+    public virtual WalletTransaction? Transaction { get; set; }
 }

@@ -29,6 +29,10 @@ public partial class User
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? Address { get; set; }
+
+    public int? PostalCode { get; set; }
+
     public virtual ICollection<Content> Contents { get; set; } = new List<Content>();
 
     public virtual ICollection<ConversationMember> ConversationMembers { get; set; } = new List<ConversationMember>();
@@ -36,6 +40,8 @@ public partial class User
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 
     public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
+
+    public virtual ICollection<RefundRequest> RefundRequests { get; set; } = new List<RefundRequest>();
 
     public virtual ICollection<Seller> Sellers { get; set; } = new List<Seller>();
 

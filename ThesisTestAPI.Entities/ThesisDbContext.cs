@@ -17,6 +17,8 @@ public partial class ThesisDbContext : DbContext
 
     public virtual DbSet<Comment> Comments { get; set; }
 
+    public virtual DbSet<CompleteProcessRequest> CompleteProcessRequests { get; set; }
+
     public virtual DbSet<Content> Contents { get; set; }
 
     public virtual DbSet<Conversation> Conversations { get; set; }
@@ -33,6 +35,8 @@ public partial class ThesisDbContext : DbContext
 
     public virtual DbSet<MessageAttachment> MessageAttachments { get; set; }
 
+    public virtual DbSet<PayShipmentPreset> PayShipmentPresets { get; set; }
+
     public virtual DbSet<Post> Posts { get; set; }
 
     public virtual DbSet<Process> Processes { get; set; }
@@ -41,11 +45,15 @@ public partial class ThesisDbContext : DbContext
 
     public virtual DbSet<Reaction> Reactions { get; set; }
 
+    public virtual DbSet<RefundRequest> RefundRequests { get; set; }
+
     public virtual DbSet<Request> Requests { get; set; }
 
     public virtual DbSet<Seller> Sellers { get; set; }
 
     public virtual DbSet<SellerReview> SellerReviews { get; set; }
+
+    public virtual DbSet<Shipment> Shipments { get; set; }
 
     public virtual DbSet<Step> Steps { get; set; }
 
@@ -84,6 +92,23 @@ public partial class ThesisDbContext : DbContext
                 .HasForeignKey(d => d.TargetContentId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__Comments__Target__625A9A57");
+        });
+
+        modelBuilder.Entity<CompleteProcessRequest>(entity =>
+        {
+            entity.HasKey(e => e.RequestId).HasName("PK__Complete__33A8517A92475437");
+
+            entity.Property(e => e.RequestId).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Status)
+                .HasMaxLength(255)
+                .IsUnicode(false)
+                .HasDefaultValue("Pending");
+
+            entity.HasOne(d => d.Process).WithMany(p => p.CompleteProcessRequests)
+                .HasForeignKey(d => d.ProcessId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__CompleteP__Proce__6CA31EA0");
         });
 
         modelBuilder.Entity<Content>(entity =>
@@ -208,6 +233,39 @@ public partial class ThesisDbContext : DbContext
                 .HasConstraintName("FK__MessageAt__Messa__2F9A1060");
         });
 
+        modelBuilder.Entity<PayShipmentPreset>(entity =>
+        {
+            entity.HasKey(e => e.PresetId).HasName("PK__PayShipm__69BA09E4224D295E");
+
+            entity.Property(e => e.PresetId).ValueGeneratedNever();
+            entity.Property(e => e.CourierCompany)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.CourierType)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.DeliveryType)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.DestinationNote)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.Method)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.OrderNote)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.OriginNote)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.Transaction).WithMany(p => p.PayShipmentPresets)
+                .HasForeignKey(d => d.TransactionId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__PayShipme__Trans__7AF13DF7");
+        });
+
         modelBuilder.Entity<Post>(entity =>
         {
             entity.HasKey(e => e.PostId).HasName("PK__Posts__AA1260182C4741E2");
@@ -231,6 +289,10 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.Description)
                 .HasMaxLength(255)
                 .IsUnicode(false);
+            entity.Property(e => e.Status)
+                .HasMaxLength(255)
+                .IsUnicode(false)
+                .HasDefaultValue("In Progress");
             entity.Property(e => e.Title)
                 .HasMaxLength(255)
                 .IsUnicode(false);
@@ -266,6 +328,39 @@ public partial class ThesisDbContext : DbContext
             entity.HasOne(d => d.Content).WithMany(p => p.Reactions)
                 .HasForeignKey(d => d.ContentId)
                 .HasConstraintName("FK_Reactions_Content");
+        });
+
+        modelBuilder.Entity<RefundRequest>(entity =>
+        {
+            entity.HasKey(e => e.RefundRequestId).HasName("PK__RefundRe__A67BF2294C30C6AD");
+
+            entity.ToTable("RefundRequest");
+
+            entity.Property(e => e.RefundRequestId).ValueGeneratedNever();
+            entity.Property(e => e.ExternalRef)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.Message)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.Status)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.Process).WithMany(p => p.RefundRequests)
+                .HasForeignKey(d => d.ProcessId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__RefundReq__Proce__56B3DD81");
+
+            entity.HasOne(d => d.RefundRequestNavigation).WithOne(p => p.RefundRequest)
+                .HasForeignKey<RefundRequest>(d => d.RefundRequestId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__RefundReq__Statu__54CB950F");
+
+            entity.HasOne(d => d.SellerUser).WithMany(p => p.RefundRequests)
+                .HasForeignKey(d => d.SellerUserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__RefundReq__Selle__66EA454A");
         });
 
         modelBuilder.Entity<Request>(entity =>
@@ -336,6 +431,39 @@ public partial class ThesisDbContext : DbContext
                 .HasConstraintName("FK__ProducerR__Produ__6BE40491");
         });
 
+        modelBuilder.Entity<Shipment>(entity =>
+        {
+            entity.HasKey(e => e.ShipmentId).HasName("PK__Shipment__5CAD37ED82251717");
+
+            entity.Property(e => e.ShipmentId).ValueGeneratedNever();
+            entity.Property(e => e.Category)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Description)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.Name)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.OrderId)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.Status)
+                .HasMaxLength(255)
+                .IsUnicode(false)
+                .HasDefaultValue("Pending");
+
+            entity.HasOne(d => d.Process).WithMany(p => p.Shipments)
+                .HasForeignKey(d => d.ProcessId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Shipments__Proce__762C88DA");
+
+            entity.HasOne(d => d.Transaction).WithMany(p => p.Shipments)
+                .HasForeignKey(d => d.TransactionId)
+                .HasConstraintName("FK__Shipments__Trans__7720AD13");
+        });
+
         modelBuilder.Entity<Step>(entity =>
         {
             entity.HasKey(e => e.StepId).HasName("PK__Steps__24343357128540E3");
@@ -381,6 +509,9 @@ public partial class ThesisDbContext : DbContext
             entity.HasIndex(e => e.UserName, "UQ__Users__C9F284564A8A4CFC").IsUnique();
 
             entity.Property(e => e.UserId).HasDefaultValueSql("(newid())");
+            entity.Property(e => e.Address)
+                .HasMaxLength(255)
+                .IsUnicode(false);
             entity.Property(e => e.CreatedAt)
                 .HasDefaultValueSql("(getdate())")
                 .HasColumnType("datetime");

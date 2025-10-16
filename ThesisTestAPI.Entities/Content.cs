@@ -25,6 +25,8 @@ public partial class Content
 
     public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
 
+    public virtual RefundRequest? RefundRequest { get; set; }
+
     public virtual Request? Request { get; set; }
 
     public virtual SellerReview? SellerReview { get; set; }

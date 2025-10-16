@@ -45,6 +45,10 @@ public partial class WalletTransaction
 
     public virtual WalletTransaction? ParentTransaction { get; set; }
 
+    public virtual ICollection<PayShipmentPreset> PayShipmentPresets { get; set; } = new List<PayShipmentPreset>();
+
+    public virtual ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
+
     public virtual ICollection<Step> Steps { get; set; } = new List<Step>();
 
     public virtual Wallet Wallet { get; set; } = null!;

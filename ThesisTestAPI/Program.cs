@@ -1,13 +1,16 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.DataProtection.Repositories;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Text;
 using ThesisTestAPI;
@@ -61,7 +64,10 @@ builder.Services.AddTransient<LikesService>();
 builder.Services.AddTransient<PostService>();
 builder.Services.AddTransient<ImageService>();
 builder.Services.AddTransient<MessageAttachmentService>();
-builder.Services.AddTransient<RatingService>(); 
+builder.Services.AddTransient<RatingService>();
+builder.Services.AddTransient<MidtransService>();
+builder.Services.AddTransient<ProcessService>();
+builder.Services.AddTransient<BiteshipService>();
 builder.Services.AddScoped<IXmlRepository, DatabaseXmlRepository>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDataProtection()
@@ -101,7 +107,32 @@ builder.WebHost.ConfigureKestrel(options =>
     options.ListenAnyIP(5026); // Allows connections from any IP
 });
 builder.Services.AddSignalR().AddAzureSignalR(builder.Configuration["Azure:SignalR:ConnectionString"]);
+builder.Services.AddHttpClient("midtrans", (sp, http) =>
+{
+    var opt = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<MidtransOptions>>().Value;
+    var basic = Convert.ToBase64String(Encoding.ASCII.GetBytes(opt.ServerKey + ":"));
+    http.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Basic", basic);
+    http.DefaultRequestHeaders.Accept.Add(new System.Net.Http.Headers.MediaTypeWithQualityHeaderValue("application/json"));
+});
+builder.Services.AddHttpClient("midtrans-iris", (sp, http) =>
+{
+    var iris = sp.GetRequiredService<IOptions<IrisOptions>>().Value;
 
+    // IRIS uses its own API key (NOT the Snap/Core ServerKey)
+    var basic = Convert.ToBase64String(Encoding.ASCII.GetBytes(iris.ApiKey + ":"));
+
+    http.BaseAddress = new Uri(iris.BaseUrl.TrimEnd('/')); // e.g. https://app.sandbox.midtrans.com/iris/api/v1
+    http.DefaultRequestHeaders.Authorization =
+        new AuthenticationHeaderValue("Basic", basic);
+    http.DefaultRequestHeaders.Accept.Add(
+        new MediaTypeWithQualityHeaderValue("application/json"));
+
+    // You’ll add "X-Idempotency-Key" per request when creating payouts,
+    // because it must be unique per payout. Don’t set it globally here.
+});
+builder.Services.Configure<MidtransOptions>(configuration.GetSection("Midtrans"));
+builder.Services.Configure<IrisOptions>(configuration.GetSection("Iris"));
+builder.Services.Configure<BiteshipOptions>(configuration.GetSection("Biteship"));
 var app = builder.Build();
 app.UseCors("AllowAll");
 app.MapHub<ChatHub>("/hubs/chat");
@@ -118,3 +149,21 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+public class MidtransOptions
+{
+    public string ServerKey { get; set; } = default!;
+    public string ClientKey { get; set; } = default!;
+    public string SnapUrl { get; set; } = default!;
+    public string CoreStatusUrl { get; set; } = default!;
+}
+public sealed class IrisOptions
+{
+    public string BaseUrl { get; set; } = "";
+    public string ApiKey { get; set; } = "";
+    public string SenderName { get; set; } = "Your Company";
+}
+
+public class BiteshipOptions
+{
+    public string ApiKey { get; set; } = "";
+}

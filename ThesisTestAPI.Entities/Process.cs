@@ -17,7 +17,15 @@ public partial class Process
 
     public DateTimeOffset? UpdatedAt { get; set; }
 
+    public string Status { get; set; } = null!;
+
+    public virtual ICollection<CompleteProcessRequest> CompleteProcessRequests { get; set; } = new List<CompleteProcessRequest>();
+
+    public virtual ICollection<RefundRequest> RefundRequests { get; set; } = new List<RefundRequest>();
+
     public virtual Request Request { get; set; } = null!;
+
+    public virtual ICollection<Shipment> Shipments { get; set; } = new List<Shipment>();
 
     public virtual ICollection<Step> Steps { get; set; } = new List<Step>();
 }

@@ -25,6 +25,12 @@ public partial class Step
 
     public string? Status { get; set; }
 
+    public long Amount { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset? UpdatedAt { get; set; }
+
     public virtual ICollection<Step> InverseNextStep { get; set; } = new List<Step>();
 
     public virtual Step? NextStep { get; set; }

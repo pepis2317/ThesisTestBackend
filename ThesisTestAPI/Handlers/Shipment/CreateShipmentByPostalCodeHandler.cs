@@ -11,6 +11,7 @@ using System.Text;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Models.Biteship;
 using ThesisTestAPI.Models.OrderRequests;
+using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Biteship
 {
@@ -20,12 +21,14 @@ namespace ThesisTestAPI.Handlers.Biteship
         private readonly BiteshipOptions _opt;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly HttpClient _httpClient;
-        public CreateShipmentByPostalCodeHandler(HttpClient httpClient,ThesisDbContext db, IOptions<BiteshipOptions> opt, IHttpContextAccessor httpContextAccessor)
+        private readonly NotificationService _notificationService;
+        public CreateShipmentByPostalCodeHandler(HttpClient httpClient, NotificationService notificationService,ThesisDbContext db, IOptions<BiteshipOptions> opt, IHttpContextAccessor httpContextAccessor)
         {
             _db = db;
             _opt = opt.Value;
             _httpContextAccessor = httpContextAccessor;
             _httpClient = httpClient;
+            _notificationService = notificationService;
         }
         private ProblemDetails ProblemDetailTemplate(string detail)
         {
@@ -102,6 +105,7 @@ namespace ThesisTestAPI.Handlers.Biteship
                     Response = System.Text.Json.JsonSerializer.Serialize(body)
                 });
             }
+            await _notificationService.SendNotification("Product has been shipped by seller", receiver.UserId);
             return (null, new OrderCreatedResponse
             {
                 Result = "Success",

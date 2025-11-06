@@ -31,7 +31,7 @@ namespace ThesisTestAPI.Handlers.User
                 };
                 return (problemDetails, null);
             }
-            var data = await _service.Login(request.Email);
+            var data = await _service.Login(request.Email, request.ExpoPushToken, request.Platform);
             return (null, data);
         }
     }

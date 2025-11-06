@@ -8,7 +8,7 @@ using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Chat
 {
-    public class EditMessageHandler : IRequestHandler<EditMessageRequest, (ProblemDetails?, string?)>
+    public class EditMessageHandler : IRequestHandler<EditMessageRequest, (ProblemDetails?, MessageResponse?)>
     {
         private readonly ThesisDbContext _db;
         private readonly IHubContext<ChatHub> _hub;
@@ -19,9 +19,9 @@ namespace ThesisTestAPI.Handlers.Chat
             _hub = hub;
             _httpContextAccessor = httpContextAccessor;
         }
-        public async Task<(ProblemDetails?, string?)> Handle(EditMessageRequest request, CancellationToken cancellationToken)
+        public async Task<(ProblemDetails?, MessageResponse?)> Handle(EditMessageRequest request, CancellationToken cancellationToken)
         {
-            var message = await _db.Messages.FirstOrDefaultAsync(q => q.MessageId == request.MessageId && q.ConversationId == request.ConversationId);
+            var message = await _db.Messages.FirstOrDefaultAsync(q => q.MessageId == request.MessageId);
             if (message == null)
             {
                 var problemDetails = new ProblemDetails
@@ -37,16 +37,18 @@ namespace ThesisTestAPI.Handlers.Chat
             message.UpdatedAt = DateTimeOffset.Now;
             _db.Messages.Update(message);
             await _db.SaveChangesAsync();
-            var payload = new
+            var payload = new MessageResponse()
             {
-                message.MessageId,
-                request.ConversationId,
-                message.SenderId,
+                MessageId = message.MessageId,
                 Message = message.Message1,
-                message.UpdatedAt
+                SenderId = message.SenderId,
+                CreatedAt = message.CreatedAt,
+                UpdatedAt = message.UpdatedAt,
+                DeletedAt = message.DeletedAt,
+                HasAttachments = message.HasAttachments,
             };
-            await _hub.Clients.Group($"conv:{request.ConversationId}").SendAsync("MessageEdited", payload);
-            return (null, "Message edited");
+            await _hub.Clients.Group(ChatHub.GroupName(message.ConversationId)).SendAsync("MessageEdited", payload);
+            return (null, payload);
         }
     }
 }

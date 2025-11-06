@@ -19,12 +19,14 @@ namespace ThesisTestAPI.Handlers.Shipment
         private readonly BiteshipService _biteshipService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly MidtransService _midtransService;
-        public PayShipmentHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor, HttpClient httpClient, MidtransService midtransService, BiteshipService biteshipService)
+        private readonly NotificationService _notificationService;
+        public PayShipmentHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor, NotificationService notificationService, HttpClient httpClient, MidtransService midtransService, BiteshipService biteshipService)
         {
             _db = db;
             _httpContextAccessor = httpContextAccessor;
             _midtransService = midtransService;
             _biteshipService = biteshipService;
+            _notificationService = notificationService;
         }
         private ProblemDetails ProblemDetailTemplate(string detail)
         {
@@ -38,7 +40,7 @@ namespace ThesisTestAPI.Handlers.Shipment
         }
         public async Task<(ProblemDetails?, ShipmentResponse?)> Handle(PayShipmentRequest request, CancellationToken cancellationToken)
         {
-            var shipment = await _db.Shipments.Include(q=>q.Process).ThenInclude(q=>q.Request).Where(q => q.ShipmentId == request.ShipmentId).FirstOrDefaultAsync();
+            var shipment = await _db.Shipments.Include(q=>q.Process).ThenInclude(q=>q.Request).ThenInclude(q=>q.Seller).Where(q => q.ShipmentId == request.ShipmentId).FirstOrDefaultAsync();
             if (shipment == null)
             {
                 return (ProblemDetailTemplate("Shipping data doesn't exist"), null);
@@ -70,13 +72,19 @@ namespace ThesisTestAPI.Handlers.Shipment
                 shipment.TransactionId = walletTransaction.TransactionId;
                 shipment.Status = ShipmentStatuses.PAID;
                 shipment.UpdatedAt = DateTime.Now;
+                shipment.OriginNote = request.OriginNote;
+                shipment.DestinationNote = request.DestinationNote;
+                shipment.OrderNote = request.OrderNote;
+                shipment.DestinationNote = request.DestinationNote;
+                shipment.CourierType = request.CourierType;
+                shipment.CourierCompany = request.CourierCompany;
                 _db.WalletTransactions.Add(walletTransaction);
-                var orderResponse = await _biteshipService.CreateOrder(request.ShipmentId, request.OriginNote, request.DestinationNote, request.DeliveryType,request.CourierCompany, request.CourierType, request.OrderNote);
-                if(orderResponse == null)
-                {
-                    return (ProblemDetailTemplate("Problem in creating biteship order"), null);
-                }
-                shipment.OrderId = orderResponse.Id;
+                //var orderResponse = await _biteshipService.CreateOrder(request.ShipmentId, request.OriginNote, request.DestinationNote, request.DeliveryType,request.CourierCompany, request.CourierType, request.OrderNote);
+                //if(orderResponse == null)
+                //{
+                //    return (ProblemDetailTemplate("Problem in creating biteship order"), null);
+                //}
+                //shipment.OrderId = orderResponse.Id;
                 await _db.SaveChangesAsync();
                 return (null, new ShipmentResponse
                 {
@@ -100,26 +108,20 @@ namespace ThesisTestAPI.Handlers.Shipment
                 SignedAmount = -request.Amount,
             };
             shipment.TransactionId = transaction.TransactionId;
-            var preset = new PayShipmentPreset
-            {
-                PresetId = Guid.NewGuid(),
-                TransactionId = transaction.TransactionId,
-                Method = request.Method,
-                CourierCompany = request.CourierCompany,
-                CourierType = request.CourierType,
-                DeliveryType = request.DeliveryType,
-                OrderNote = request.OrderNote,
-                OriginNote = request.OriginNote,
-                DestinationNote = request.DestinationNote
-            };
+            shipment.OriginNote = request.OriginNote;
+            shipment.DestinationNote = request.DestinationNote;
+            shipment.OrderNote = request.OrderNote;
+            shipment.CourierType = request.CourierType;
+            shipment.DestinationNote = request.DestinationNote;
+            shipment.CourierCompany = request.CourierCompany;
             _db.WalletTransactions.Add(transaction);
-            _db.PayShipmentPresets.Add(preset);
             await _db.SaveChangesAsync();
             var snap = await _midtransService.CreateSnapTransactionAsync(orderId, request.Amount);
             if (snap == null)
             {
                 return (ProblemDetailTemplate("Something went wrong when creating midtrans transaction"), null);
             }
+            await _notificationService.SendNotification("Shipping fee has been paid by buyer", shipment.Process.Request.Seller.OwnerId);
             return (null, new ShipmentResponse
             {
                 ShipmentId = shipment.ShipmentId,

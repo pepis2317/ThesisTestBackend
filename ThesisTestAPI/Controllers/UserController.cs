@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using ThesisTestAPI.Entities;
+using ThesisTestAPI.Models.Notifcations;
 using ThesisTestAPI.Models.User;
 using ThesisTestAPI.Services;
 using ThesisTestAPI.Validators.User;
@@ -61,7 +62,7 @@ namespace ThesisTestAPI.Controllers
         }
         
         [HttpPost("user-login")]
-        public async Task<IActionResult> Login([FromQuery]UserLoginRequest request)
+        public async Task<IActionResult> Login([FromBody]UserLoginRequest request)
         {
             var result = await _mediator.Send(request);
             if (result.Item1 != null)
@@ -70,7 +71,42 @@ namespace ThesisTestAPI.Controllers
             }
             return Ok(result.Item2);
         }
+        [Authorize]
+        [HttpPut("expo-push-token")]
+        public async Task<IActionResult> PutToken([FromBody]UpdateExpoTokenRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
 
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(Invalid("User id not found in JWT"));
+            }
+            request.UserId = Guid.Parse(userId);
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
+        [Authorize]
+        [HttpGet("notifications")]
+        public async Task<IActionResult> GetNotifications([FromQuery]GetNotificationsRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(Invalid("User id not found in JWT"));
+            }
+            request.UserId = Guid.Parse(userId);
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken([FromBody]RefreshTokenRequest request)
         {

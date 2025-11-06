@@ -23,5 +23,46 @@ namespace ThesisTestAPI.Controllers
             }
             return Ok(result.Item2);
         }
+        [HttpGet("get-steps")]
+        public async Task<IActionResult> GetSteps([FromQuery] GetStepsRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
+        [HttpPut("edit-step")]
+        public async Task<IActionResult> EditStep([FromBody] EditStepRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
+        [HttpGet("get-step")]
+        public async Task<IActionResult> GetStep([FromQuery] GetStepRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
+        [HttpPut("decline-step")]
+        public async Task<IActionResult> Decline([FromBody] DeclineStepRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
+
     }
 }

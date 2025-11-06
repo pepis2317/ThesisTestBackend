@@ -1,0 +1,48 @@
+﻿using MediatR;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using ThesisTestAPI.Entities;
+using ThesisTestAPI.Models.Process;
+using ThesisTestAPI.Services;
+
+namespace ThesisTestAPI.Handlers.Process
+{
+    public class GetProcessesHandler : IRequestHandler<GetProcessesRequest, (ProblemDetails?, PaginatedProcessesResponse?)>
+    {
+        private readonly ThesisDbContext _db;
+        private readonly BlobStorageService _blobStorageService;
+        public GetProcessesHandler(ThesisDbContext db, BlobStorageService blobStorageService)
+        {
+            _db = db;
+            _blobStorageService = blobStorageService;
+        }
+        public async Task<(ProblemDetails?, PaginatedProcessesResponse?)> Handle(GetProcessesRequest request, CancellationToken cancellationToken)
+        {
+            var orderRequestIds = await _db.Contents.Include(q=>q.Request).Where(q => q.AuthorId == request.UserId && q.Request != null).Select(q=>q.ContentId).ToListAsync();
+            var processes = await _db.Processes.Include(q=>q.Request).ThenInclude(q=>q.Seller).Skip((request.pageNumber - 1) * request.pageSize).Where(q => orderRequestIds.Contains(q.RequestId)).OrderByDescending(q=>q.CreatedAt).ToListAsync();
+            var list = new List<ProcessResponse>();
+            foreach(var process in processes)
+            {
+                var item = new ProcessResponse
+                {
+                    ProcessId = process.ProcessId,
+                    Description = process.Description,
+                    Status = process.Status,
+                    Title = process.Title
+                };
+                if (!string.IsNullOrEmpty(process.Request.Seller.SellerPicture))
+                {
+                    item.Picture = await _blobStorageService.GetTemporaryImageUrl(process.Request.Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+                }
+                list.Add(item);
+
+            }
+            var total = await _db.Processes.Where(q => orderRequestIds.Contains(q.RequestId)).CountAsync();
+            return (null, new PaginatedProcessesResponse
+            {
+                Total = total,
+                Processes = list
+            });
+        }
+    }
+}

@@ -9,7 +9,5 @@ namespace ThesisTestAPI.Models.Transaction
         public Guid UserId { get; set; }
         public string BankCode { get; set; } = string.Empty;
         public string Account { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-
     }
 }

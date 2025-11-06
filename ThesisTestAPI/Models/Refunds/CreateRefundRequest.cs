@@ -7,7 +7,6 @@ namespace ThesisTestAPI.Models.Refunds
     {
         public Guid AuthorId { get; set; }
         public Guid ProcessId { get; set; }
-        public Guid SellerUserId { get; set; }
         public string Message { get; set; } = string.Empty;
     }
 }

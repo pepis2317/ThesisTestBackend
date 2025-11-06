@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Enum;
 using ThesisTestAPI.Models.Shipment;
+using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Shipment
 {
@@ -11,10 +12,12 @@ namespace ThesisTestAPI.Handlers.Shipment
     {
         private readonly ThesisDbContext _db;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        public CreateShipmentHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor)
+        private readonly NotificationService _notificationService;
+        public CreateShipmentHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor, NotificationService notificationService)
         {
             _db = db;
             _httpContextAccessor = httpContextAccessor;
+            _notificationService = notificationService;
         }
         private ProblemDetails ProblemDetailTemplate(string detail)
         {
@@ -28,7 +31,7 @@ namespace ThesisTestAPI.Handlers.Shipment
         }
         public async Task<(ProblemDetails?, ShipmentResponse?)> Handle(CreateShipmentRequest request, CancellationToken cancellationToken)
         {
-            var process = await _db.Processes.Include(q=>q.Steps).Where(q => q.ProcessId == request.ProcessId).FirstOrDefaultAsync();
+            var process = await _db.Processes.Include(q=>q.Request).ThenInclude(q=>q.RequestNavigation).Include(q=>q.Steps).Where(q => q.ProcessId == request.ProcessId).FirstOrDefaultAsync();
             if (process == null)
             {
                 return (ProblemDetailTemplate("Invalid process"), null);
@@ -59,6 +62,7 @@ namespace ThesisTestAPI.Handlers.Shipment
             };
             _db.Shipments.Add(shipment);
             await _db.SaveChangesAsync();
+            await _notificationService.SendNotification($"Shipment request created for process {process.Title}", process.Request.RequestNavigation.AuthorId);
             return (null, new ShipmentResponse
             {
                 ShipmentId = shipment.ShipmentId

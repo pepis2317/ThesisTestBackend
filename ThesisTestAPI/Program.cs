@@ -68,6 +68,7 @@ builder.Services.AddTransient<RatingService>();
 builder.Services.AddTransient<MidtransService>();
 builder.Services.AddTransient<ProcessService>();
 builder.Services.AddTransient<BiteshipService>();
+builder.Services.AddTransient<NotificationService>();
 builder.Services.AddScoped<IXmlRepository, DatabaseXmlRepository>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddDataProtection()
@@ -135,7 +136,6 @@ builder.Services.Configure<IrisOptions>(configuration.GetSection("Iris"));
 builder.Services.Configure<BiteshipOptions>(configuration.GetSection("Biteship"));
 var app = builder.Build();
 app.UseCors("AllowAll");
-app.MapHub<ChatHub>("/hubs/chat");
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -145,6 +145,7 @@ if (app.Environment.IsDevelopment())
 }
 app.UseAuthentication();
 app.UseAuthorization();
+app.MapHub<ChatHub>("/hubs/chat");
 
 app.MapControllers();
 

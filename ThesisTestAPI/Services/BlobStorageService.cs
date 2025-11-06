@@ -6,6 +6,7 @@ using System;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Security.Cryptography;
+using ThesisTestAPI.Models.MessageAttachments;
 
 namespace ThesisTestAPI.Services
 {
@@ -16,6 +17,55 @@ namespace ThesisTestAPI.Services
         {
             string connectionString = configuration["AzureBlobStorage:ConnectionString"];
             _blobServiceClient = new BlobServiceClient(connectionString);
+        }
+        public async Task<AttachmentDTO> GenerateSasUriAsync(
+            Guid attachmentId,
+            string blobName,
+            string fileName,
+            string mimeType,
+            string containerName,
+            TimeSpan? lifetime = null)
+        {
+            var container = _blobServiceClient.GetBlobContainerClient(containerName);
+            var blob = container.GetBlobClient(blobName);
+
+            lifetime ??= TimeSpan.FromMinutes(10);
+
+            // Get file properties (includes size)
+            var properties = await blob.GetPropertiesAsync();
+            var sizeBytes = properties.Value.ContentLength;
+
+            // Build SAS
+            var sasBuilder = new BlobSasBuilder
+            {
+                BlobContainerName = containerName,
+                BlobName = blobName,
+                Resource = "b",
+                StartsOn = DateTimeOffset.UtcNow.AddMinutes(-1),
+                ExpiresOn = DateTimeOffset.UtcNow.Add(lifetime.Value)
+            };
+
+            sasBuilder.SetPermissions(BlobSasPermissions.Read);
+            sasBuilder.ContentType = mimeType;
+            sasBuilder.ContentDisposition =
+                $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{Uri.EscapeDataString(fileName)}";
+
+            if (!_blobServiceClient.CanGenerateAccountSasUri)
+                throw new InvalidOperationException(
+                    "BlobServiceClient must be created with a Storage Account key to generate SAS URLs."
+                );
+
+            var sasUri = blob.GenerateSasUri(sasBuilder);
+
+            return new AttachmentDTO
+            {
+                AttachmentId = attachmentId,
+                DownloadUrl = sasUri.ToString(),
+                SizeBytes = sizeBytes,
+                ExpiresAt = sasBuilder.ExpiresOn,
+                MimeType = mimeType,
+                FileName = fileName
+            };
         }
         public async Task<string?> GetTemporaryImageUrl(string? fileName, string containerName)
         {

@@ -33,11 +33,17 @@ public partial class User
 
     public int? PostalCode { get; set; }
 
+    public string? ExpoPushToken { get; set; }
+
+    public string? Platform { get; set; }
+
     public virtual ICollection<Content> Contents { get; set; } = new List<Content>();
 
     public virtual ICollection<ConversationMember> ConversationMembers { get; set; } = new List<ConversationMember>();
 
     public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
+
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 
     public virtual ICollection<Reaction> Reactions { get; set; } = new List<Reaction>();
 

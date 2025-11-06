@@ -12,23 +12,36 @@ namespace ThesisTestAPI.Services
             _db = db;
             _blobStorageService = blobStorageService;
         }
-        public async Task<string> CreateMessageAttachment(CreateMessageAttachmentRequest request)
+        public async Task<List<MessageAttachmentResponse>> CreateMessageAttachments(CreateMessageAttachmentRequest request)
         {
-            var contentType = request.File.ContentType;
-            using var stream = request.File.OpenReadStream();
-            var blobFileName = await _blobStorageService.UploadFileAsync(stream, request.File.FileName, contentType, Enum.BlobContainers.MESSAGEATTACHMENTS);
-            var attachment = new MessageAttachment
-            {
-                AttachmentId = Guid.NewGuid(),
-                FileType = request.File.ContentType,
-                CreatedAt = DateTimeOffset.Now,
-                BlobFileName = blobFileName,
-                FileName = request.File.FileName,
-                MessageId = request.MessageId,
-            };
-            _db.MessageAttachments.Add(attachment);
+            var created = new List<MessageAttachment>();
+            var list = new  List<MessageAttachmentResponse>();
+            foreach (var file in request.Files.Where(q => q.Length > 0)) {
+                var contentType = file.ContentType;
+                using var stream = file.OpenReadStream();
+                var blobFileName = await _blobStorageService.UploadFileAsync(stream, file.FileName, contentType, Enum.BlobContainers.MESSAGEATTACHMENTS);
+                var attachment = new MessageAttachment
+                {
+                    AttachmentId = Guid.NewGuid(),
+                    FileType = file.ContentType,
+                    CreatedAt = DateTimeOffset.Now,
+                    BlobFileName = blobFileName,
+                    FileName = file.FileName,
+                    MessageId = request.MessageId,
+                };
+                created.Add(attachment);
+                list.Add(new MessageAttachmentResponse
+                {
+                    AttachmentId = attachment.AttachmentId,
+                    ContentType = contentType,
+                    BlobFileName = file.FileName,
+                    FileName = file.FileName,
+                    Size = file.Length
+                });
+            }
+            _db.MessageAttachments.AddRange(created);
             await _db.SaveChangesAsync();
-            return blobFileName;
+            return list;
         }
     }
 }

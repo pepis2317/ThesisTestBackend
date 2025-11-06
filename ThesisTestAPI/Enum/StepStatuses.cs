@@ -6,5 +6,6 @@
         public static string WORKING = "Working";
         public static string COMPLETED = "Completed";
         public static string CANCELLED = "Cancelled";
+        public static string DECLINED = "Declined";
     }
 }

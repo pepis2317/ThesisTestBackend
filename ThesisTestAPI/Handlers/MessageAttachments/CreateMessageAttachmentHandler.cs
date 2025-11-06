@@ -6,18 +6,17 @@ using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.MessageAttachments
 {
-    public class CreateMessageAttachmentHandler : IRequestHandler<CreateMessageAttachmentRequest, (ProblemDetails?, string?)>
+    public class CreateMessageAttachmentHandler : IRequestHandler<CreateMessageAttachmentRequest, (ProblemDetails?, List<MessageAttachmentResponse>?)>
     {
         private readonly ThesisDbContext _db;
-        private readonly BlobStorageService _blobStorageService;
         private readonly MessageAttachmentService _messageAttachmentService;
         public CreateMessageAttachmentHandler(MessageAttachmentService messageAttachmentService)
         {
             _messageAttachmentService = messageAttachmentService;
         }
-        public async Task<(ProblemDetails?, string?)> Handle(CreateMessageAttachmentRequest request, CancellationToken cancellationToken)
+        public async Task<(ProblemDetails?, List<MessageAttachmentResponse>?)> Handle(CreateMessageAttachmentRequest request, CancellationToken cancellationToken)
         {
-            var blobFileName = await _messageAttachmentService.CreateMessageAttachment(request);
+            var blobFileName = await _messageAttachmentService.CreateMessageAttachments(request);
             return (null, blobFileName);
         }
     }

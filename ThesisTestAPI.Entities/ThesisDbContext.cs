@@ -35,6 +35,8 @@ public partial class ThesisDbContext : DbContext
 
     public virtual DbSet<MessageAttachment> MessageAttachments { get; set; }
 
+    public virtual DbSet<Notification> Notifications { get; set; }
+
     public virtual DbSet<PayShipmentPreset> PayShipmentPresets { get; set; }
 
     public virtual DbSet<Post> Posts { get; set; }
@@ -191,6 +193,7 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.MessageId).HasName("PK__Messages__C87C0C9CBDF3591C");
 
             entity.Property(e => e.MessageId).ValueGeneratedNever();
+            entity.Property(e => e.HasAttachments).HasDefaultValue(false);
             entity.Property(e => e.Message1)
                 .HasMaxLength(255)
                 .IsUnicode(false)
@@ -231,6 +234,22 @@ public partial class ThesisDbContext : DbContext
                 .HasForeignKey(d => d.MessageId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK__MessageAt__Messa__2F9A1060");
+        });
+
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.HasKey(e => e.NotificationId).HasName("PK__Notifica__20CF2E12377B7676");
+
+            entity.Property(e => e.NotificationId).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
+            entity.Property(e => e.Message)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+
+            entity.HasOne(d => d.User).WithMany(p => p.Notifications)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Notificat__UserI__0FEC5ADD");
         });
 
         modelBuilder.Entity<PayShipmentPreset>(entity =>
@@ -439,14 +458,29 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.Category)
                 .HasMaxLength(255)
                 .IsUnicode(false);
+            entity.Property(e => e.CourierCompany)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.CourierType)
+                .HasMaxLength(255)
+                .IsUnicode(false);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.Description)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.DestinationNote)
                 .HasMaxLength(255)
                 .IsUnicode(false);
             entity.Property(e => e.Name)
                 .HasMaxLength(255)
                 .IsUnicode(false);
             entity.Property(e => e.OrderId)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.OrderNote)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.OriginNote)
                 .HasMaxLength(255)
                 .IsUnicode(false);
             entity.Property(e => e.Status)
@@ -518,11 +552,17 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.Email)
                 .HasMaxLength(255)
                 .IsUnicode(false);
+            entity.Property(e => e.ExpoPushToken)
+                .HasMaxLength(255)
+                .IsUnicode(false);
             entity.Property(e => e.Password)
                 .HasMaxLength(255)
                 .IsUnicode(false);
             entity.Property(e => e.Pfp).HasMaxLength(500);
             entity.Property(e => e.Phone)
+                .HasMaxLength(255)
+                .IsUnicode(false);
+            entity.Property(e => e.Platform)
                 .HasMaxLength(255)
                 .IsUnicode(false);
             entity.Property(e => e.RefreshToken).HasMaxLength(500);

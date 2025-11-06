@@ -54,12 +54,15 @@ namespace ThesisTestAPI.Handlers.Refund
             var steps = await _db.Steps.Include(q => q.Transaction).Where(q => q.ProcessId == refundRequest.ProcessId && (q.Status == StepStatuses.COMPLETED ||q.Status == StepStatuses.WORKING)).ToListAsync();
             foreach(var step in steps)
             {
-                if (step.Transaction != null && step.Transaction.ExternalRef != null)
+                if (step.Transaction != null)
                 {
-                    var status = await _midtransService.GetStatusAsync(step.Transaction.ExternalRef);
-                    if(status != null && status.status_code != "404")
+                    if(step.Transaction.ExternalRef != null)
                     {
-                        midtransStatuses.Add(status);
+                        var status = await _midtransService.GetStatusAsync(step.Transaction.ExternalRef);
+                        if (status != null && status.status_code != "404")
+                        {
+                            midtransStatuses.Add(status);
+                        }
                     }
                     else
                     {
@@ -111,7 +114,7 @@ namespace ThesisTestAPI.Handlers.Refund
                     ExternalRef = status.order_id,
                     ReferenceType = "MidtransRefund",
                     Memo = "Refund via Midtrans",
-                    ReferenceId = refundRequest.RefundRequestId
+                    //ReferenceId = refundRequest.RefundRequestId
                 };
                 _db.WalletTransactions.Add(snapTransaction);
             }

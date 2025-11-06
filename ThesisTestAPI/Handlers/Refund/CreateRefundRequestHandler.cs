@@ -17,6 +17,7 @@ namespace ThesisTestAPI.Handlers.Refund
         }
         public async Task<(ProblemDetails?, RefundResponse?)> Handle(CreateRefundRequest request, CancellationToken cancellationToken)
         {
+            var sellerId = await _db.Processes.Include(q => q.Request).ThenInclude(q => q.Seller).Where(q => q.ProcessId == request.ProcessId).Select(q=>q.Request.Seller.OwnerId).FirstOrDefaultAsync();
             var contentId = Guid.NewGuid();
             var content = new Content
             {
@@ -30,7 +31,7 @@ namespace ThesisTestAPI.Handlers.Refund
                 Message = request.Message,
                 Status = RequestStatuses.PENDING,
                 ProcessId = request.ProcessId,
-                SellerUserId = request.SellerUserId,
+                SellerUserId = sellerId,
                 RefundRequestNavigation = content
             };
             _db.RefundRequests.Add(refundRequest);

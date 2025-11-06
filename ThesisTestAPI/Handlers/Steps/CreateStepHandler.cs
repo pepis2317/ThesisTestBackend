@@ -1,20 +1,22 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Enum;
 using ThesisTestAPI.Models.Steps;
+using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Steps
 {
     public class CreateStepHandler : IRequestHandler<CreateStepRequest, (ProblemDetails?, StepResponse?)>
     {
         private readonly ThesisDbContext _db;
-        private readonly IHttpContextAccessor _httpContextAccessor;
-        public CreateStepHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor)
+        private readonly NotificationService _notificationService;
+        public CreateStepHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor, NotificationService notificationService)
         {
             _db = db;
-            _httpContextAccessor = httpContextAccessor;
+            _notificationService = notificationService;
         }
         public async Task<(ProblemDetails?, StepResponse?)> Handle(CreateStepRequest request, CancellationToken cancellationToken)
         {
@@ -47,12 +49,14 @@ namespace ThesisTestAPI.Handlers.Steps
                 }
             }
             _db.Steps.Add(step);
-            var process = await _db.Processes.Where(q=>q.ProcessId == request.ProcessId).FirstOrDefaultAsync();
+            var process = await _db.Processes.Include(q=>q.Request).ThenInclude(q=>q.RequestNavigation).Where(q=>q.ProcessId == request.ProcessId).FirstOrDefaultAsync();
             if(process != null && process.Status == ProcessStatuses.CREATED)
             {
                 process.Status = ProcessStatuses.INPROGRESS;
             }
             await _db.SaveChangesAsync();
+            var receiverId = process.Request.RequestNavigation.AuthorId;
+            await _notificationService.SendNotification("Step has been added", receiverId);
             return (null, new StepResponse
             {
                 StepId = contentId

@@ -70,7 +70,9 @@ namespace ThesisTestAPI.Services
                 UserName = request.UserName,
                 Email = request.Email,
                 Phone = request.Phone,
-                Password = _protector.Protect(request.Password)
+                Password = _protector.Protect(request.Password),
+                ExpoPushToken = request.ExpoPushToken,
+                Platform = request.Platform,
             };
             _db.Users.Add(user);
             await _db.SaveChangesAsync();
@@ -94,7 +96,7 @@ namespace ThesisTestAPI.Services
             }
             return Convert.ToBase64String(randomBytes);
         }
-        public async Task<LoginResponse?>Login(string email)
+        public async Task<LoginResponse?>Login(string email, string? expoPushToken, string? platform)
         {
             var user = await _db.Users.FirstOrDefaultAsync(q=>q.Email == email);
             if(user == null)
@@ -105,6 +107,11 @@ namespace ThesisTestAPI.Services
             var refreshToken = GenerateRefreshToken();
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
+            if( expoPushToken!=null && platform != null)
+            {
+                user.ExpoPushToken = expoPushToken;
+                user.Platform = platform;
+            }
             _db.Users.Update(user);
             await _db.SaveChangesAsync();
             return new LoginResponse

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using ThesisTestAPI.Entities;
+using ThesisTestAPI.Models.Chat;
 
 namespace ThesisTestAPI.Services
 {
@@ -11,36 +12,61 @@ namespace ThesisTestAPI.Services
     public class ChatHub : Hub
     {
         private readonly ThesisDbContext _db;
-        public ChatHub(ThesisDbContext db)
-        {
-            _db = db;
-        }
-        private static string GroupName(Guid conversationId) => $"conv:{conversationId}";
+        public ChatHub(ThesisDbContext db) => _db = db;
+
+        public static string GroupName(Guid conversationId) => $"conv:{conversationId}";
         public override async Task OnConnectedAsync()
         {
-            var userId = Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Context.User?.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userId))
+            try
             {
-                throw new HubException("User not authenticated");
+                var userIdStr =
+                    Context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value
+                    ?? Context.User?.FindFirst("UserId")?.Value;
+
+                if (!Guid.TryParse(userIdStr, out var userId))
+                {
+                    Context.Abort();
+                    return;
+                }
+                var conversationIds = await _db.ConversationMembers
+                    .Where(q => q.UserId == userId)
+                    .Select(q => q.ConversationId)
+                    .ToListAsync();
+
+                foreach (var id in conversationIds)
+                {
+                    await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(id));
+                }
             }
-            var conversationIds = await _db.ConversationMembers.Where(q=>q.UserId == Guid.Parse(userId)).Select(q => q.ConversationId).ToListAsync();
-            foreach(var id in conversationIds)
+            catch (Exception ex)
             {
-                await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(id));
+                Context.Abort();
+                return;
             }
+
             await base.OnConnectedAsync();
         }
+
         public override async Task OnDisconnectedAsync(Exception? ex)
         {
-            // Optional: cleanup, presence tracking, etc.
+            // (optional) presence cleanup; don’t throw
             await base.OnDisconnectedAsync(ex);
         }
-        public Task Typing(Guid conversationId) =>
-        Clients.Group(GroupName(conversationId))
-               .SendAsync("Typing", new { conversationId, userId = Context.UserIdentifier });
-        public Task Read(Guid conversationId, Guid messageId) =>
-        Clients.Group(GroupName(conversationId))
-               .SendAsync("Read", new { conversationId, messageId, userId = Context.UserIdentifier });
 
+        // Add these to match what your client invokes
+        public Task JoinConversationGroup(string groupName)
+            => Groups.AddToGroupAsync(Context.ConnectionId, groupName);
+
+        public Task LeaveConversationGroup(string groupName)
+            => Groups.RemoveFromGroupAsync(Context.ConnectionId, groupName);
+
+        public Task Typing(Guid conversationId) =>
+            Clients.Group(GroupName(conversationId))
+                   .SendAsync("Typing", new { conversationId, userId = Context.UserIdentifier });
+
+        public Task Read(Guid conversationId, Guid messageId) =>
+            Clients.Group(GroupName(conversationId))
+                   .SendAsync("Read", new { conversationId, messageId, userId = Context.UserIdentifier });
     }
+
 }

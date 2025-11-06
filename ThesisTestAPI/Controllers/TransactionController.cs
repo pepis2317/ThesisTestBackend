@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ThesisTestAPI.Models.Comment;
@@ -33,8 +34,9 @@ namespace ThesisTestAPI.Controllers
             var result = await _mediator.Send(request);
             return Ok(result.Item2);
         }
+        [Authorize]
         [HttpPost("deposit-funds")]
-        public async Task<IActionResult> DepositFunds([FromBody] long amount)
+        public async Task<IActionResult> DepositFunds([FromBody] DepositRequest request)
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
 
@@ -42,26 +44,41 @@ namespace ThesisTestAPI.Controllers
             {
                 return BadRequest(Invalid("User id not found in JWT"));
             }
-            var result = await _mediator.Send(new DepositRequest
-            {
-                UserId = Guid.Parse(userId),
-                Amount = amount
-            });
+            request.UserId = Guid.Parse(userId);
+            var result = await _mediator.Send(request);
             if (result.Item1 != null)
             {
                 return BadRequest(result.Item1);
             }
             return Ok(result.Item2);
         }
+        [Authorize]
+        [HttpGet("get-balance")]
+        public async Task<IActionResult> GetBalance()
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(Invalid("User id not found in JWT"));
+            }
+            var result = await _mediator.Send(new GetWalletRequest { UserId = Guid.Parse(userId) });
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
+        [Authorize]
         [HttpPost("withdraw-funds")]
         public async Task<IActionResult> WithdrawFunds([FromBody] WithdrawRequest request)
         {
-            //var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
 
-            //if (string.IsNullOrEmpty(userId))
-            //{
-            //    return BadRequest(Invalid("User id not found in JWT"));
-            //}
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(Invalid("User id not found in JWT"));
+            }
+            request.UserId = Guid.Parse(userId);
             var result = await _mediator.Send(request);
             if (result.Item1 != null)
             {
@@ -81,7 +98,7 @@ namespace ThesisTestAPI.Controllers
             var result = await _mediator.Send(request);
             return Ok(result.Item2);
         }
-        [HttpPost("/api/approve-and-pay-step")]
+        [HttpPost("approve-and-pay-step")]
         public async Task<IActionResult> ApproveAndPayForStep([FromBody] ApproveAndPayStepRequest request)
         {
             var result = await _mediator.Send(request);

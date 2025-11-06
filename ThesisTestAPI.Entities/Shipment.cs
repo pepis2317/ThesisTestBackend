@@ -37,6 +37,16 @@ public partial class Shipment
 
     public string Status { get; set; } = null!;
 
+    public string? CourierCompany { get; set; }
+
+    public string? CourierType { get; set; }
+
+    public string? OrderNote { get; set; }
+
+    public string? OriginNote { get; set; }
+
+    public string? DestinationNote { get; set; }
+
     public virtual Process Process { get; set; } = null!;
 
     public virtual WalletTransaction? Transaction { get; set; }

@@ -8,7 +8,7 @@ using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Chat
 {
-    public class DeleteMessageHandler : IRequestHandler<DeleteMessageRequest, (ProblemDetails?, string?)>
+    public class DeleteMessageHandler : IRequestHandler<DeleteMessageRequest, (ProblemDetails?, MessageResponse?)>
     {
         private readonly ThesisDbContext _db;
         private readonly BlobStorageService _blobStorageService;
@@ -21,9 +21,9 @@ namespace ThesisTestAPI.Handlers.Chat
             _httpContextAccessor = httpContextAccessor;
             _blobStorageService = blobStorageService;
         }
-        public async Task<(ProblemDetails?, string?)> Handle(DeleteMessageRequest request, CancellationToken cancellationToken)
+        public async Task<(ProblemDetails?, MessageResponse?)> Handle(DeleteMessageRequest request, CancellationToken cancellationToken)
         {
-            var message = await _db.Messages.FirstOrDefaultAsync(q => q.MessageId == request.MessageId && q.ConversationId == request.ConversationId);
+            var message = await _db.Messages.FirstOrDefaultAsync(q => q.MessageId == request.MessageId);
             if (message == null)
             {
                 var problemDetails = new ProblemDetails
@@ -40,20 +40,22 @@ namespace ThesisTestAPI.Handlers.Chat
             {
                 await _blobStorageService.DeleteFileAsync(attachment.BlobFileName, Enum.BlobContainers.MESSAGEATTACHMENTS);
             }
-            message.Message1 = "";
+            message.Message1 = "Message has been deleted";
             message.DeletedAt = DateTimeOffset.Now;
             _db.Messages.Update(message);
             await _db.SaveChangesAsync();
-            var payload = new
+            var payload = new MessageResponse()
             {
-                message.MessageId,
-                request.ConversationId,
-                message.SenderId,
+                MessageId = message.MessageId,
                 Message = message.Message1,
-                message.DeletedAt
+                SenderId = message.SenderId,
+                CreatedAt = message.CreatedAt,
+                UpdatedAt = message.UpdatedAt,
+                DeletedAt = message.DeletedAt,
+                HasAttachments = message.HasAttachments,
             };
-            await _hub.Clients.Group($"conv:{request.ConversationId}").SendAsync("MessageDeleted", payload);
-            return (null, "Message deleted");
+            await _hub.Clients.Group(ChatHub.GroupName(message.ConversationId)).SendAsync("MessageDeleted", payload);
+            return (null, payload);
         }
     }
 }

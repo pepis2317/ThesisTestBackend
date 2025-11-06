@@ -4,5 +4,6 @@
     {
         public static string PENDING = "Pending";
         public static string PAID = "Paid";
+        public static string SENT = "Sent";
     }
 }

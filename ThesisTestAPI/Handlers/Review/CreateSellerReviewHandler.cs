@@ -2,15 +2,18 @@
 using Microsoft.AspNetCore.Mvc;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Models.Review;
+using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Review
 {
     public class CreateSellerReviewHandler : IRequestHandler<CreateSellerReviewRequest, (ProblemDetails?, string?)>
     {
         private readonly ThesisDbContext _db;
-        public CreateSellerReviewHandler(ThesisDbContext db)
+        private readonly RatingService _ratingService;
+        public CreateSellerReviewHandler(ThesisDbContext db, RatingService ratingService)
         {
             _db = db;
+            _ratingService = ratingService;
         }
         public async Task<(ProblemDetails?, string?)> Handle(CreateSellerReviewRequest request, CancellationToken cancellationToken)
         {
@@ -30,6 +33,12 @@ namespace ThesisTestAPI.Handlers.Review
             };
             _db.SellerReviews.Add(review);
             await _db.SaveChangesAsync();
+            await _ratingService.CreateRating(new Models.Rating.CreateRatingRequest
+            {
+                AuthorId = request.AuthorId,
+                Rating = request.Rating,
+                ContentId = contentId,
+            });
             return (null, contentId.ToString());
         }
     }

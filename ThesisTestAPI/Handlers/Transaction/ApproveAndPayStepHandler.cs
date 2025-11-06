@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using ThesisTestAPI.Entities;
@@ -14,11 +15,13 @@ namespace ThesisTestAPI.Handlers.Transaction
         private readonly ThesisDbContext _db;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly MidtransService _midtransService;
-        public ApproveAndPayStepHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor, MidtransService midtransService)
+        private readonly NotificationService _notificationService;
+        public ApproveAndPayStepHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor, MidtransService midtransService, NotificationService notificationService)
         {
             _db = db;
             _httpContextAccessor = httpContextAccessor;
             _midtransService = midtransService;
+            _notificationService = notificationService;
         }
         private ProblemDetails ProblemDetailTemplate(string detail)
         {
@@ -76,6 +79,7 @@ namespace ThesisTestAPI.Handlers.Transaction
                 step.TransactionId = walletTransaction.TransactionId;
                 _db.WalletTransactions.Add(walletTransaction);
                 await _db.SaveChangesAsync();
+                await _notificationService.SendNotification("Step has been accepted", sellerId);
                 return (null, new TransactionResponse
                 {
                     orderId = walletTransaction.TransactionId.ToString()
@@ -101,6 +105,7 @@ namespace ThesisTestAPI.Handlers.Transaction
             step.TransactionId = transaction.TransactionId;
             _db.WalletTransactions.Add(transaction);
             await _db.SaveChangesAsync();
+            await _notificationService.SendNotification("Step has been accepted", sellerId);
             var snap = await _midtransService.CreateSnapTransactionAsync(orderId, step.Amount);
             if (snap == null)
             {

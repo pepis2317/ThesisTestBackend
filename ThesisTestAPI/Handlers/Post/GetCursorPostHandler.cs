@@ -7,7 +7,7 @@ using ThesisTestAPI.Entities;
 using ThesisTestAPI.Models.Post;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Model;
 
-namespace ThesisTestAPI.Handlers.Chat
+namespace ThesisTestAPI.Handlers.Post
 {
     public class GetCursorPostHandler : IRequestHandler<GetCursorPostRequest, (ProblemDetails?, PostResponse?)>
     {
@@ -73,7 +73,7 @@ namespace ThesisTestAPI.Handlers.Chat
                 hasMore = isFirstPost==null
             });
         }
-        private ThesisTestAPI.Entities.Post? CurrentHelper(List<ThesisTestAPI.Entities.Post> posts,GetCursorPostRequest request)
+        private Entities.Post? CurrentHelper(List<Entities.Post> posts,GetCursorPostRequest request)
         {
             if(request.GetPrevPostId != null)
             {

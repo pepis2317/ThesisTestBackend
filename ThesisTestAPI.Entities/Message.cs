@@ -21,6 +21,8 @@ public partial class Message
 
     public DateTimeOffset? DeletedAt { get; set; }
 
+    public bool? HasAttachments { get; set; }
+
     public virtual Conversation Conversation { get; set; } = null!;
 
     public virtual ICollection<MessageAttachment> MessageAttachments { get; set; } = new List<MessageAttachment>();

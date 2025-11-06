@@ -1,23 +1,27 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Enum;
 using ThesisTestAPI.Models.Process;
+using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Process
 {
-    public class CompleteProcessHandler : IRequestHandler<RespondCompleteProcess, (ProblemDetails?, ProcessResponse?)>
+    public class CompleteProcessHandler : IRequestHandler<RespondCompleteProcess, (ProblemDetails?, CompleteProcessResponse?)>
     {
         private readonly ThesisDbContext _db;
-        public CompleteProcessHandler(ThesisDbContext db)
+        private readonly NotificationService _notifService;
+        public CompleteProcessHandler(ThesisDbContext db, NotificationService notifService)
         {
             _db = db;
+            _notifService = notifService;
         }
-        public async Task<(ProblemDetails?, ProcessResponse?)> Handle(RespondCompleteProcess request, CancellationToken cancellationToken)
+        public async Task<(ProblemDetails?, CompleteProcessResponse?)> Handle(RespondCompleteProcess request, CancellationToken cancellationToken)
         {
             var completeRequest = await _db.CompleteProcessRequests.Where(q => q.RequestId == request.CompleteProcessRequestId).FirstOrDefaultAsync();
-            var process = await _db.Processes.Include(q => q.Request).Where(q => q.ProcessId == completeRequest.ProcessId).FirstOrDefaultAsync();
+            var process = await _db.Processes.Include(q => q.Request).ThenInclude(q => q.RequestNavigation).ThenInclude(q=>q.Author).Where(q => q.ProcessId == completeRequest.ProcessId).FirstOrDefaultAsync();
             if (request.Response == RequestStatuses.ACCEPTED)
             {
                 var ownerId = await _db.Sellers.Where(q => q.SellerId == process.Request.SellerId).Select(q => q.OwnerId).FirstOrDefaultAsync();
@@ -42,7 +46,9 @@ namespace ThesisTestAPI.Handlers.Process
                 completeRequest.UpdatedAt = DateTimeOffset.Now;
             }
             await _db.SaveChangesAsync();
-            return (null, null);
+            var receiverId = completeRequest.Process.Request.RequestNavigation.Author.UserId;
+            await _notifService.SendNotification($"Completion request for {process.Title} has been {request.Response}", receiverId);
+            return (null, new CompleteProcessResponse { CompleteProcessRequestId = completeRequest.RequestId, Status = completeRequest.Status});
         }
     }
 }

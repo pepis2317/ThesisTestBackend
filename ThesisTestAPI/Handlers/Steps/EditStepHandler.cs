@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.Drawing.Text;
@@ -13,13 +14,15 @@ namespace ThesisTestAPI.Handlers.Steps
     public class EditStepHandler : IRequestHandler<EditStepRequest, (ProblemDetails?, StepResponse?)>
     {
         private readonly ThesisDbContext _db;
+        private readonly BlobStorageService _blobStorageService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly MidtransService _midtransService;
-        public EditStepHandler(ThesisDbContext db, MidtransService midtransService, IHttpContextAccessor httpContextAccessor)
+        public EditStepHandler(ThesisDbContext db, MidtransService midtransService, IHttpContextAccessor httpContextAccessor, BlobStorageService blobStorageService)
         {
             _db = db;
             _httpContextAccessor = httpContextAccessor;
             _midtransService = midtransService;
+            _blobStorageService = blobStorageService;
         }
         private ProblemDetails ProblemDetailTemplate(string detail)
         {
@@ -129,6 +132,24 @@ namespace ThesisTestAPI.Handlers.Steps
             if (request.MaxCompleteEstimate != null)
             {
                 step.MaxCompleteEstimate = (DateTimeOffset)request.MaxCompleteEstimate;
+            }
+            if(request.Images != null)
+            {
+                var created = new List<ThesisTestAPI.Entities.Image>();
+                foreach (var file in request.Images.Where(q => q.Length > 0))
+                {
+                    var contentType = file.ContentType;
+                    using var stream = file.OpenReadStream();
+                    created.Add(new ThesisTestAPI.Entities.Image
+                    {
+                        ImageId = Guid.NewGuid(),
+                        ContentId = step.StepId,
+                        ImageName = file.FileName,
+                        CreatedAt = DateTimeOffset.Now,
+                    });
+                    await _blobStorageService.UploadImageFreeAspectAsync(stream, file.FileName, contentType, Enum.BlobContainers.IMAGES);
+                }
+                _db.Images.AddRange(created);
             }
             await _db.SaveChangesAsync();
             return (null, new StepResponse

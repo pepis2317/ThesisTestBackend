@@ -83,7 +83,6 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.CommentId).ValueGeneratedNever();
             entity.Property(e => e.Comment1)
                 .HasMaxLength(255)
-                .IsUnicode(false)
                 .HasColumnName("Comment");
 
             entity.HasOne(d => d.CommentNavigation).WithOne(p => p.CommentCommentNavigation)
@@ -132,9 +131,7 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.ConversationId).HasName("PK__Conversa__C050D8774D78D97F");
 
             entity.Property(e => e.ConversationId).ValueGeneratedNever();
-            entity.Property(e => e.ConversationName)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.ConversationName).HasMaxLength(255);
         });
 
         modelBuilder.Entity<ConversationMember>(entity =>
@@ -196,7 +193,6 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.HasAttachments).HasDefaultValue(false);
             entity.Property(e => e.Message1)
                 .HasMaxLength(255)
-                .IsUnicode(false)
                 .HasColumnName("Message");
             entity.Property(e => e.Status)
                 .HasMaxLength(255)
@@ -242,9 +238,7 @@ public partial class ThesisDbContext : DbContext
 
             entity.Property(e => e.NotificationId).ValueGeneratedNever();
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.Message)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Message).HasMaxLength(255);
 
             entity.HasOne(d => d.User).WithMany(p => p.Notifications)
                 .HasForeignKey(d => d.UserId)
@@ -290,9 +284,7 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.PostId).HasName("PK__Posts__AA1260182C4741E2");
 
             entity.Property(e => e.PostId).ValueGeneratedNever();
-            entity.Property(e => e.Caption)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Caption).HasMaxLength(255);
 
             entity.HasOne(d => d.PostNavigation).WithOne(p => p.Post)
                 .HasForeignKey<Post>(d => d.PostId)
@@ -305,16 +297,12 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.ProcessId).HasName("PK__Processe__1B39A9561F2053BA");
 
             entity.Property(e => e.ProcessId).ValueGeneratedNever();
-            entity.Property(e => e.Description)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.Status)
                 .HasMaxLength(255)
                 .IsUnicode(false)
                 .HasDefaultValue("In Progress");
-            entity.Property(e => e.Title)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Title).HasMaxLength(255);
 
             entity.HasOne(d => d.Request).WithMany(p => p.Processes)
                 .HasForeignKey(d => d.RequestId)
@@ -356,12 +344,11 @@ public partial class ThesisDbContext : DbContext
             entity.ToTable("RefundRequest");
 
             entity.Property(e => e.RefundRequestId).ValueGeneratedNever();
+            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
             entity.Property(e => e.ExternalRef)
                 .HasMaxLength(255)
                 .IsUnicode(false);
-            entity.Property(e => e.Message)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Message).HasMaxLength(255);
             entity.Property(e => e.Status)
                 .HasMaxLength(255)
                 .IsUnicode(false);
@@ -387,9 +374,7 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.RequestId).HasName("PK__Requests__33A8517A88319411");
 
             entity.Property(e => e.RequestId).ValueGeneratedNever();
-            entity.Property(e => e.RequestMessage)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.RequestMessage).HasMaxLength(255);
             entity.Property(e => e.RequestStatus)
                 .HasMaxLength(255)
                 .IsUnicode(false);
@@ -410,16 +395,13 @@ public partial class ThesisDbContext : DbContext
         {
             entity.HasKey(e => e.SellerId).HasName("PK__Producer__13369652E029C705");
 
-            entity.HasIndex(e => e.SellerName, "UQ__Producer__E0E723B8321AB5E4").IsUnique();
-
             entity.Property(e => e.SellerId).ValueGeneratedNever();
             entity.Property(e => e.Banner)
                 .HasMaxLength(255)
                 .IsUnicode(false);
             entity.Property(e => e.CreatedAt).HasColumnType("datetime");
-            entity.Property(e => e.SellerName)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Description).HasMaxLength(255);
+            entity.Property(e => e.SellerName).HasMaxLength(255);
             entity.Property(e => e.SellerPicture)
                 .HasMaxLength(255)
                 .IsUnicode(false);
@@ -436,9 +418,7 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.SellerReviewId).HasName("PK__Producer__8AA2C4138B0CED33");
 
             entity.Property(e => e.SellerReviewId).ValueGeneratedNever();
-            entity.Property(e => e.Review)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Review).HasMaxLength(255);
 
             entity.HasOne(d => d.Seller).WithMany(p => p.SellerReviews)
                 .HasForeignKey(d => d.SellerId)
@@ -582,9 +562,7 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.UserReviewId).HasName("PK__UserRevi__238D9AA39D8362D1");
 
             entity.Property(e => e.UserReviewId).ValueGeneratedNever();
-            entity.Property(e => e.Review)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Review).HasMaxLength(255);
 
             entity.HasOne(d => d.User).WithMany(p => p.UserReviews)
                 .HasForeignKey(d => d.UserId)

@@ -5,6 +5,7 @@ namespace ThesisTestAPI.Models.Like
 {
     public class UnlikeRequest : IRequest<(ProblemDetails?, string?)>
     {
-        public Guid LikeId { get; set; }
+        public Guid ContentId { get; set; }
+        public Guid UserId {  get; set; }
     }
 }

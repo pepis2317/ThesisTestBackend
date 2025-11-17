@@ -81,9 +81,17 @@ namespace ThesisTestAPI.Controllers
             }
             return Ok(result.Item2);
         }
+        [Authorize]
         [HttpGet("get-comments")]
         public async Task<IActionResult> GetComments([FromQuery]GetCommentsRequest request)
         {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(Invalid("User id not found in JWT"));
+            }
+            request.UserId = Guid.Parse(userId);
             var result = await _mediator.Send(request);
             if (result.Item1 != null)
             {

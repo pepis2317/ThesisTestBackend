@@ -20,7 +20,7 @@ namespace ThesisTestAPI.Handlers.Review
 
         public async Task<(ProblemDetails?, string?)> Handle(EditSellerReviewRequest request, CancellationToken cancellationToken)
         {
-            var review = await _db.SellerReviews.Where(q => q.SellerReviewId == request.ReviewId).FirstOrDefaultAsync();
+            var review = await _db.SellerReviews.Include(q=>q.SellerReviewNavigation).Where(q => q.SellerReviewId == request.ReviewId).FirstOrDefaultAsync();
             if(review == null)
             {
                 var problemDetails = new ProblemDetails
@@ -32,7 +32,9 @@ namespace ThesisTestAPI.Handlers.Review
                 };
                 return (problemDetails, null);
             }
+            var rating = await _db.Ratings.Include(q=>q.RatingNavigation).Where(q=>q.RatingNavigation.ContentId == review.SellerReviewId).FirstOrDefaultAsync();
             review.Review = request.Review;
+            rating.Rating1 = request.Rating;
             review.SellerReviewNavigation.UpdatedAt = DateTimeOffset.Now;
             _db.SellerReviews.Update(review);
             await _db.SaveChangesAsync();

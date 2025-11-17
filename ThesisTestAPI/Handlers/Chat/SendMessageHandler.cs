@@ -44,7 +44,8 @@ namespace ThesisTestAPI.Handlers.Chat
                 ConversationId = request.ConversationId,
                 SenderId = request.SenderId,
                 Message1 = request.Text ?? "",
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                HasAttachments = request.HasAttachments
             };
 
             _db.Messages.Add(msg);

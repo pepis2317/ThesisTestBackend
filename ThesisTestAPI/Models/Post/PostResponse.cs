@@ -9,6 +9,9 @@ namespace ThesisTestAPI.Models.Post
         public string? Thumbnail { get; set; } = string.Empty;
         public bool? isMultipleImages { get; set; }
         public bool? hasMore { get; set; }
+        public int Likes { get; set; }
+        public bool Liked { get; set; }
+        public int Comments { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
 

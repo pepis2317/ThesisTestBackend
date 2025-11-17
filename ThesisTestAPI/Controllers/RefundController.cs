@@ -26,6 +26,16 @@ namespace ThesisTestAPI.Controllers
             };
             return problemDetails;
         }
+        [HttpGet("get-refunds")]
+        public async Task<IActionResult> Get([FromQuery]GetRefundRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
         [Authorize]
         [HttpPost("create-refund-request")]
         public async Task<IActionResult> CreateRefundRequest(CreateRefundRequest request)

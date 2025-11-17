@@ -18,10 +18,9 @@ namespace ThesisTestAPI.Handlers.Process
         }
         public async Task<(ProblemDetails?, PaginatedProcessesResponse?)> Handle(GetProcessesRequest request, CancellationToken cancellationToken)
         {
-            var orderRequestIds = await _db.Contents.Include(q=>q.Request).Where(q => q.AuthorId == request.UserId && q.Request != null).Select(q=>q.ContentId).ToListAsync();
-            var processes = await _db.Processes.Include(q=>q.Request).ThenInclude(q=>q.Seller).Skip((request.pageNumber - 1) * request.pageSize).Where(q => orderRequestIds.Contains(q.RequestId)).OrderByDescending(q=>q.CreatedAt).ToListAsync();
+            var processes = await _db.Processes.Include(q => q.Request).ThenInclude(q => q.Seller).Include(q => q.Request).ThenInclude(q => q.RequestNavigation).ThenInclude(q=>q.Author).Skip((request.pageNumber - 1) * request.pageSize).Where(q => q.Request.RequestNavigation.AuthorId == request.UserId).OrderByDescending(q => q.CreatedAt).ToListAsync();
             var list = new List<ProcessResponse>();
-            foreach(var process in processes)
+            foreach (var process in processes)
             {
                 var item = new ProcessResponse
                 {
@@ -30,14 +29,34 @@ namespace ThesisTestAPI.Handlers.Process
                     Status = process.Status,
                     Title = process.Title
                 };
-                if (!string.IsNullOrEmpty(process.Request.Seller.SellerPicture))
+                var seller = process.Request.Seller;
+                var user = process.Request.RequestNavigation.Author;
+                var sellerPic = "";
+                var pfp = "";
+                if (!string.IsNullOrEmpty(user.Pfp))
                 {
-                    item.Picture = await _blobStorageService.GetTemporaryImageUrl(process.Request.Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+                    pfp = await _blobStorageService.GetTemporaryImageUrl(user.Pfp, Enum.BlobContainers.PFP);
                 }
+                if (!string.IsNullOrEmpty(seller.SellerPicture))
+                {
+                    sellerPic = await _blobStorageService.GetTemporaryImageUrl(seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+                }
+                item.User = new Models.User.UserResponse
+                {
+                    UserId = user.UserId,
+                    UserName = user.UserName,
+                    Pfp = pfp
+                };
+                item.Seller = new Models.Producer.SellerResponse
+                {
+                    SellerId = seller.SellerId,
+                    SellerName = seller.SellerName,
+                    SellerPicture = sellerPic,
+                };
                 list.Add(item);
 
             }
-            var total = await _db.Processes.Where(q => orderRequestIds.Contains(q.RequestId)).CountAsync();
+            var total = await _db.Processes.Include(q => q.Request).ThenInclude(q => q.RequestNavigation).Where(q => q.Request.RequestNavigation.AuthorId == request.UserId).CountAsync();
             return (null, new PaginatedProcessesResponse
             {
                 Total = total,

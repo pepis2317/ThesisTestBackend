@@ -7,7 +7,7 @@ public partial class Conversation
 {
     public Guid ConversationId { get; set; }
 
-    public string ConversationName { get; set; } = null!;
+    public string? ConversationName { get; set; }
 
     public int IsGroup { get; set; }
 

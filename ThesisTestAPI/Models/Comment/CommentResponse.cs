@@ -10,6 +10,8 @@ namespace ThesisTestAPI.Models.Comment
         public string AuthorName { get; set; } = string.Empty;
         public string AuthorPfp { get; set; } = string.Empty;
         public string Comment { get; set; } = string.Empty;
+        public int Likes {  get; set; }
+        public bool Liked { get; set; }
         public DateTimeOffset CreatedAt {  get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
         public int Replies { get; set; }

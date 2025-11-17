@@ -38,10 +38,18 @@ namespace ThesisTestAPI.Handlers.Shipment
                     Status = process.Status,
                     Title = process.Title
                 };
-                if (string.IsNullOrEmpty(process.Request.RequestNavigation.Author.Pfp))
+                var user = process.Request.RequestNavigation.Author;
+                var pfp = "";
+                if (!string.IsNullOrEmpty(user.Pfp))
                 {
-                    item.Picture = await _blobStorageService.GetTemporaryImageUrl(process.Request.RequestNavigation.Author.Pfp, Enum.BlobContainers.PFP);
+                    pfp = await _blobStorageService.GetTemporaryImageUrl(user.Pfp, Enum.BlobContainers.PFP);
                 }
+                item.User = new Models.User.UserResponse
+                {
+                    UserId = user.UserId,
+                    UserName = user.UserName,
+                    Pfp = pfp
+                };
                 list.Add(item);
             }
             var total = await _db.Processes.Where(q => q.Request.Seller.OwnerId == request.UserId && q.Status == ProcessStatuses.COMPLETED && q.Shipments == null).CountAsync();

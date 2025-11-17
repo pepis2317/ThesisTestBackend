@@ -32,7 +32,8 @@ namespace ThesisTestAPI.Handlers.Refund
                 Status = RequestStatuses.PENDING,
                 ProcessId = request.ProcessId,
                 SellerUserId = sellerId,
-                RefundRequestNavigation = content
+                RefundRequestNavigation = content,
+                CreatedAt = DateTimeOffset.Now
             };
             _db.RefundRequests.Add(refundRequest);
             await _db.SaveChangesAsync();

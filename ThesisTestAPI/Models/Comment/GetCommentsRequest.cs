@@ -5,6 +5,7 @@ namespace ThesisTestAPI.Models.Comment
 {
     public class GetCommentsRequest: IRequest<(ProblemDetails?, PaginatedCommentsResponse?)>
     {
+        public Guid UserId {  get; set; }
         public Guid ContentId { get; set; }
         public int pageSize { get; set; }
         public int pageNumber { get; set; }

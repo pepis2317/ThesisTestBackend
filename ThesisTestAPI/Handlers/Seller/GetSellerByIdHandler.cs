@@ -38,18 +38,22 @@ namespace ThesisTestAPI.Handlers.Seller
                 return (problemDetails, null);
             }
             var owner = await _userService.Get(Seller.OwnerId);
-            var picture = await PictureHelper(Seller.SellerPicture);
+            var picture = await PictureHelper(Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+            var banner = await PictureHelper(Seller.Banner, Enum.BlobContainers.BANNER);
             return (null, new SellerResponse()
             {
                 SellerId = Seller.SellerId,
                 SellerName = Seller.SellerName,
                 Owner = owner,
-                SellerPicture = picture
+                SellerPicture = picture,
+                Banner = banner,
+                Description = Seller.Description,
+                CreatedAt = (DateTime) Seller.CreatedAt
             });
         }
-        private async Task<string?> PictureHelper(string? fileName)
+        private async Task<string?> PictureHelper(string? fileName, string container)
         {
-            string? imageUrl = await _blobStorageService.GetTemporaryImageUrl(fileName, Enum.BlobContainers.SELLERPICTURE);
+            string? imageUrl = await _blobStorageService.GetTemporaryImageUrl(fileName, container);
             return imageUrl;
         }
     }

@@ -10,6 +10,7 @@ namespace ThesisTestAPI.Models.Steps
         public string? Description { get; set; }
         public DateTimeOffset? MinCompleteEstimate {  get; set; }
         public DateTimeOffset? MaxCompleteEstimate { get; set; }
+        public List<IFormFile>? Images { get; set; } = new();
         public string? Status {  get; set; }
 
     }

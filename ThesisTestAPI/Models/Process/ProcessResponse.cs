@@ -1,4 +1,7 @@
-﻿namespace ThesisTestAPI.Models.Process
+﻿using ThesisTestAPI.Models.Producer;
+using ThesisTestAPI.Models.User;
+
+namespace ThesisTestAPI.Models.Process
 {
     public class ProcessResponse
     {
@@ -7,7 +10,7 @@
         public string? Description { get; set; }
         public string Status {  get; set; } = string.Empty;
         public string? Picture { get; set; } = string.Empty;
-        public Guid? SellerId { get; set; }
-        public Guid? UserId { get; set; }
+        public SellerResponse? Seller { get; set; }
+        public UserResponse? User { get; set; }
     }
 }

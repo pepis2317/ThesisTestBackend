@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ThesisTestAPI.Models.Biteship
 {
-    public class CreateShipmentByPostalCodeRequest :IRequest<(ProblemDetails?, OrderCreatedResponse?)>
+    public class CreateShipmentByCoordinatesRequest :IRequest<(ProblemDetails?, OrderCreatedResponse?)>
     {
         public Guid OriginUserId { get; set; }
         public Guid DestinationUserId {  get; set; }

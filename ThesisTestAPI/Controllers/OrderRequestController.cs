@@ -44,6 +44,24 @@ namespace ThesisTestAPI.Controllers
             return Ok(result.Item2);
         }
         [Authorize]
+        [HttpGet("check-can-request")]
+        public async Task<IActionResult> Check([FromQuery]CheckCanCreateOrderRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
+
+            if (string.IsNullOrEmpty(userId))
+            {
+                return BadRequest(Invalid("User id not found in JWT"));
+            }
+            request.UserId = Guid.Parse(userId);
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
+        [Authorize]
         [HttpGet("get-order-requests")]
         public async Task<IActionResult> Get([FromQuery] GetOrderRequests request)
         {
@@ -60,16 +78,9 @@ namespace ThesisTestAPI.Controllers
             }
             return Ok(result.Item2);
         }
-        [Authorize]
-        [HttpGet("get-seller-order-requests")]
-        public async Task<IActionResult> GetSeller([FromQuery] GetSellerOrderRequests request)
+        [HttpGet("get-order-request")]
+        public async Task<IActionResult> GetById([FromQuery] GetOrderRequest request)
         {
-            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("UserId")?.Value;
-            if (string.IsNullOrEmpty(userId))
-            {
-                return BadRequest(Invalid("User id not found in JWT"));
-            }
-            request.UserId = Guid.Parse(userId);
             var result = await _mediator.Send(request);
             if (result.Item1 != null)
             {

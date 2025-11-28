@@ -15,14 +15,14 @@ using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Biteship
 {
-    public class CreateShipmentByPostalCodeHandler : IRequestHandler<CreateShipmentByPostalCodeRequest, (ProblemDetails?, OrderCreatedResponse?)>
+    public class CreateShipmentByCoordinatesHandler : IRequestHandler<CreateShipmentByCoordinatesRequest, (ProblemDetails?, OrderCreatedResponse?)>
     {
         private readonly ThesisDbContext _db;
         private readonly BiteshipOptions _opt;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly HttpClient _httpClient;
         private readonly NotificationService _notificationService;
-        public CreateShipmentByPostalCodeHandler(HttpClient httpClient, NotificationService notificationService,ThesisDbContext db, IOptions<BiteshipOptions> opt, IHttpContextAccessor httpContextAccessor)
+        public CreateShipmentByCoordinatesHandler(HttpClient httpClient, NotificationService notificationService,ThesisDbContext db, IOptions<BiteshipOptions> opt, IHttpContextAccessor httpContextAccessor)
         {
             _db = db;
             _opt = opt.Value;
@@ -40,7 +40,7 @@ namespace ThesisTestAPI.Handlers.Biteship
                 Instance = _httpContextAccessor.HttpContext?.Request.Path
             };
         }
-        public async Task<(ProblemDetails?, OrderCreatedResponse?)> Handle(CreateShipmentByPostalCodeRequest request, CancellationToken cancellationToken)
+        public async Task<(ProblemDetails?, OrderCreatedResponse?)> Handle(CreateShipmentByCoordinatesRequest request, CancellationToken cancellationToken)
         {
             var sender = await _db.Users.Where(q => q.UserId == request.OriginUserId).FirstOrDefaultAsync();
             if (sender == null)
@@ -52,11 +52,11 @@ namespace ThesisTestAPI.Handlers.Biteship
             {
                 return (ProblemDetailTemplate("Invalid receiver"), null);
             }
-            if (string.IsNullOrEmpty(sender.Address) || sender.PostalCode == null)
+            if (string.IsNullOrEmpty(sender.Address) || sender.Location == null)
             {
                 return (ProblemDetailTemplate("Sender lacks address or postal code"), null);
             }
-            if(string.IsNullOrEmpty(receiver.Address) || receiver.PostalCode == null)
+            if(string.IsNullOrEmpty(receiver.Address) || receiver.Location == null)
             {
                 return (ProblemDetailTemplate("Receiver lacks address or postal code"), null);
             }
@@ -67,13 +67,21 @@ namespace ThesisTestAPI.Handlers.Biteship
                 origin_contact_email = sender.Email,
                 origin_address = sender.Address,
                 origin_note = request.OriginNote,
-                origin_postal_code = (int)sender.PostalCode,
+                origin_coordinate = new Models.Shipment.BiteshipCoordinate
+                {
+                    latitude = sender.Location.Coordinate.Y,
+                    longitude = sender.Location.Coordinate.X,
+                },
                 destination_contact_name = receiver.UserName,
                 destination_contact_phone = receiver.Phone,
                 destination_contact_email = receiver.Email,
                 destination_address = receiver.Address,
                 destination_note = request.DestinationNote,
-                destination_postal_code= (int)receiver.PostalCode,
+                destination_coordinate = new Models.Shipment.BiteshipCoordinate
+                {
+                    latitude = receiver.Location.Coordinate.Y,
+                    longitude = receiver.Location.Coordinate.X,
+                },
                 delivery_type = request.DeliveryType,
                 order_note = request.OrderNote,
             };

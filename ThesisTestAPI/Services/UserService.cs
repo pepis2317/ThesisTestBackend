@@ -2,6 +2,7 @@
 using Azure.Storage.Sas;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 using System.ComponentModel;
 using System.Reflection.Metadata;
 using System.Security.Cryptography;
@@ -60,6 +61,10 @@ namespace ThesisTestAPI.Services
                 Rating = user.Rating,
                 Pfp = pfp,
                 Role = user.Role,
+                Latitude = user.Location.Coordinate.Y,
+                Longitude = user.Location.Coordinate.X,
+                Address = user.Address,
+                PostalCode = user.PostalCode,
             };
         }
         public async Task<UserResponse> Register(UserRegisterRequest request)
@@ -75,6 +80,10 @@ namespace ThesisTestAPI.Services
                 Address = request.Address,
                 PostalCode = request.PostalCode,
             };
+            if(request.Longitude!= null && request.Latitude!= null)
+            {
+                user.Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 };
+            }
             var wallet = new Wallet
             {
                 WalletId = Guid.NewGuid(),
@@ -178,6 +187,16 @@ namespace ThesisTestAPI.Services
             user.Password = string.IsNullOrEmpty(request.Password) ? user.Password : _protector.Protect(request.Password);
             user.Phone = string.IsNullOrEmpty(request.Phone) ? user.Phone : request.Phone;
             user.Role = string.IsNullOrEmpty(request.Role)? user.Role : request.Role;
+            user.Address = string.IsNullOrEmpty(request.Address) ? user.Address : request.Address;
+            if(request.Latitude != null && request.Longitude != null)
+            {
+                user.Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 };
+            }
+            if(request.PostalCode != null)
+            {
+                user.PostalCode = request.PostalCode;
+            }
+            
             user.UpdatedAt = DateTime.Now;
             _db.Users.Update(user);
             await _db.SaveChangesAsync();

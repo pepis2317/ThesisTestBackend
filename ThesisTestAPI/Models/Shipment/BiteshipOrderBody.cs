@@ -1,4 +1,6 @@
-﻿namespace ThesisTestAPI.Models.Biteship
+﻿using ThesisTestAPI.Models.Shipment;
+
+namespace ThesisTestAPI.Models.Biteship
 {
     public class BiteshipOrderBody
     {
@@ -7,12 +9,12 @@
         public string origin_contact_email { get; set; } = string.Empty;
         public string origin_address { get; set; } = string.Empty;
         public string origin_note {  get; set; } = string.Empty;
-        public int origin_postal_code { get; set; }
+        public BiteshipCoordinate origin_coordinate { get; set; } = new();
         public string destination_contact_name { get; set; } = string.Empty;
         public string destination_contact_phone { get; set; } = string.Empty;
         public string destination_contact_email { get; set; } = string.Empty;
         public string destination_address { get; set; } = string.Empty;
-        public int destination_postal_code { get; set; }
+        public BiteshipCoordinate destination_coordinate { get;set; } = new();
         public string destination_note { get; set; } = string.Empty;
         public string delivery_type { get; set; } = string.Empty;
         public string courier_company { get; set; } = string.Empty;

@@ -12,6 +12,8 @@ namespace ThesisTestAPI.Models.User
         public required string Role { get; set; }
         public int PostalCode { get; set; }
         public required string Address { get; set; }
+        public double? Latitude { get; set; }
+        public double? Longitude { get; set; }
 
     }
 }

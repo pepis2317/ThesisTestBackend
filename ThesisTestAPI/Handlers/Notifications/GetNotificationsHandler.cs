@@ -19,7 +19,7 @@ namespace ThesisTestAPI.Handlers.Notifications
         {
             var query = _db.Notifications
                 .Where(q => q.UserId == request.UserId)
-                .OrderBy(q => q.CreatedAt);
+                .OrderByDescending(q => q.CreatedAt);
             // Apply pagination AFTER filtering and ordering
             var notifications = await query
                 .Skip((request.pageNumber - 1) * request.pageSize)

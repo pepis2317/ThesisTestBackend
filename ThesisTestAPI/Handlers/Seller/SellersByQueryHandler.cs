@@ -50,7 +50,7 @@ namespace ThesisTestAPI.Handlers.Seller
                 userLocation = new Point(request.longitude.Value, request.latitude.Value) { SRID = 4326 };
             }
 
-            var query = _db.Sellers.AsQueryable();
+            var query = _db.Sellers.Include(q=>q.Owner).AsQueryable();
 
             if (!string.IsNullOrEmpty(request.searchTerm))
             {
@@ -60,7 +60,7 @@ namespace ThesisTestAPI.Handlers.Seller
 
             if (userLocation != null)
             {
-                query = query.OrderBy(p => p.Location.Distance(userLocation));
+                query = query.OrderBy(p => p.Owner.Location.Distance(userLocation));
             }
 
             var totalSellers = await query.CountAsync();

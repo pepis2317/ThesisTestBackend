@@ -37,6 +37,7 @@ namespace ThesisTestAPI.Services
                 {
                     await Groups.AddToGroupAsync(Context.ConnectionId, GroupName(id));
                 }
+                await Groups.AddToGroupAsync(Context.ConnectionId, userIdStr);
             }
             catch (Exception ex)
             {

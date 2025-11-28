@@ -1,4 +1,5 @@
 ﻿using System.Net.Mail;
+using System.Text.Json.Serialization;
 using ThesisTestAPI.Models.Biteship;
 
 namespace ThesisTestAPI.Models.Shipment
@@ -10,6 +11,7 @@ namespace ThesisTestAPI.Models.Shipment
         public string Object { get; set; } = string.Empty;
         public string Id { get; set; } = string.Empty;
         public string ShortId { get; set; } = string.Empty;
+        public Destination Destination { get; set; } = new();
         public Shipper Shipper { get; set; } = new();
         public Origin Origin { get; set; } = new();
         public Delivery Delivery { get; set; } = new();
@@ -72,7 +74,7 @@ namespace ThesisTestAPI.Models.Shipment
         public DateTimeOffset datetime { get; set; }
         public string? note { get; set; }
         public string type { get; set; } = string.Empty;
-        public string? distance { get; set; }
+        public double? distance { get; set; }
         public string? distance_unit { get; set; }
     }
     public class Shipper
@@ -121,8 +123,8 @@ namespace ThesisTestAPI.Models.Shipment
     {
         public bool use { get; set; }
         public int fee { get; set; }
-        public string note { get; set; }
-        public string link { get; set; }
+        public string? note { get; set; }
+        public string? link { get; set; }
     }
     public class Cod
     {

@@ -74,7 +74,8 @@ namespace ThesisTestAPI.Services
                 Password = _protector.Protect(request.Password),
                 Role = request.Role,
                 Address = request.Address,
-                PostalCode = request.PostalCode
+                PostalCode = request.PostalCode,
+                Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 },
             };
             var wallet = new Wallet
             {
@@ -95,7 +96,6 @@ namespace ThesisTestAPI.Services
                 OwnerId = userId,
                 SellerName = request.SellerName,
                 SellerId = SellerId,
-                Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 },
                 Banner = null,
                 CreatedAt = DateTime.Now
             };

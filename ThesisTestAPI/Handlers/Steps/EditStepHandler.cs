@@ -122,6 +122,7 @@ namespace ThesisTestAPI.Handlers.Steps
                         };
                         _db.WalletTransactions.Add(snapTransaction);
                     }
+                    step.Transaction = null;
                 }
                 step.Status = request.Status;
             }

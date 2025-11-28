@@ -34,13 +34,13 @@ namespace ThesisTestAPI.Services
             }
             var senderId = await _db.Sellers.Where(q => q.SellerId == shipment.Process.Request.SellerId).Select(q => q.OwnerId).FirstOrDefaultAsync();
             var sender = await _db.Users.Where(q => q.UserId == senderId).FirstOrDefaultAsync();
-            if (sender == null || sender.PostalCode == null || sender.Address == null)
+            if (sender == null || sender.Location == null || sender.Location == null)
             {
                 return null;
             }
             var receiverId = await _db.Contents.Where(q => q.ContentId == shipment.Process.Request.RequestId).Select(q => q.AuthorId).FirstOrDefaultAsync();
             var receiver = await _db.Users.Where(q => q.UserId == receiverId).FirstOrDefaultAsync();
-            if (receiver == null || receiver.PostalCode == null || receiver.Address == null)
+            if (receiver == null || receiver.Location == null || receiver.Location == null)
             {
                 return null;
             }
@@ -51,13 +51,21 @@ namespace ThesisTestAPI.Services
                 origin_contact_email = sender.Email,
                 origin_address = sender.Address,
                 origin_note = originNote,
-                origin_postal_code = (int)sender.PostalCode,
+                origin_coordinate = new BiteshipCoordinate
+                {
+                    latitude = sender.Location.Coordinate.Y,
+                    longitude = sender.Location.Coordinate.X
+                },
                 destination_contact_name = receiver.UserName,
                 destination_contact_phone = receiver.Phone,
                 destination_contact_email = receiver.Email,
                 destination_address = receiver.Address,
                 destination_note = destinationNote,
-                destination_postal_code = (int)receiver.PostalCode,
+                destination_coordinate = new BiteshipCoordinate 
+                {
+                    latitude = sender.Location.Coordinate.Y,
+                    longitude = sender.Location.Coordinate.X
+                },
                 delivery_type = deliveryType,
                 courier_company = courierCompany,
                 courier_type = courierType,
@@ -95,20 +103,22 @@ namespace ThesisTestAPI.Services
             }
             var senderId = await _db.Sellers.Where(q => q.SellerId == shipment.Process.Request.SellerId).Select(q => q.OwnerId).FirstOrDefaultAsync();
             var sender = await _db.Users.Where(q => q.UserId == senderId).FirstOrDefaultAsync();
-            if (sender == null || sender.PostalCode == null || sender.Address == null)
+            if (sender == null || sender.Location == null || sender.Address == null)
             {
                 return null;
             }
             var receiverId = await _db.Contents.Where(q => q.ContentId == shipment.Process.Request.RequestId).Select(q => q.AuthorId).FirstOrDefaultAsync();
             var receiver = await _db.Users.Where(q => q.UserId == receiverId).FirstOrDefaultAsync();
-            if (receiver == null || receiver.PostalCode == null || receiver.Address == null)
+            if (receiver == null || receiver.Location == null || receiver.Address == null)
             {
                 return null;
             }
             var ratesBody = new BiteshipRatesBody
             {
-                origin_postal_code = (int)sender.PostalCode,
-                destination_postal_code = (int)receiver.PostalCode,
+                origin_latitude = sender.Location.Coordinate.Y,
+                origin_longitude = sender.Location.Coordinate.X,
+                destination_latitude = receiver.Location.Coordinate.Y,
+                destination_longitude = receiver.Location.Coordinate.X,
                 couriers = couriers,
             };
             ratesBody.items.Add(new Models.Biteship.BiteshipItem

@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.AspNetCore.DataProtection;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.SqlServer.Types;
 using NetTopologySuite;
 using NetTopologySuite.Geometries;
@@ -13,10 +14,12 @@ namespace ThesisTestAPI.Services
     {
         private readonly ThesisDbContext _db;
         private readonly BlobStorageService _blobStorageService;
-        public SellerService(ThesisDbContext db, BlobStorageService blobStorageService)
+        private readonly IDataProtector _protector;
+        public SellerService(ThesisDbContext db, BlobStorageService blobStorageService, IDataProtectionProvider provider)
         {
             _db = db;
             _blobStorageService = blobStorageService;
+            _protector = provider.CreateProtector("CredentialsProtector");
         }
         public async Task<List<SellerResponse>> GetAllSellers()
         {
@@ -57,21 +60,46 @@ namespace ThesisTestAPI.Services
 
         public async Task<SellerResponse?> CreateSeller(CreateSellerRequest request)
         {
-            if(!request.Latitude.HasValue || !request.Longitude.HasValue)
+            if (!request.Latitude.HasValue || !request.Longitude.HasValue)
             {
                 return null;
             }
-            var SellerId = Guid.NewGuid();
+            var userId = Guid.NewGuid();
+            var user = new User
+            {
+                UserId = userId,
+                UserName = request.UserName,
+                Email = request.Email,
+                Phone = request.Phone,
+                Password = _protector.Protect(request.Password),
+                Role = request.Role,
+                Address = request.Address,
+                PostalCode = request.PostalCode,
+                Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 },
+            };
+            var wallet = new Wallet
+            {
+                WalletId = Guid.NewGuid(),
+                UserId = user.UserId,
+                Currency = "IDR",
+                BalanceMinor = 0,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
+            };
 
+            _db.Users.Add(user);
+            _db.Wallets.Add(wallet);
+            var SellerId = Guid.NewGuid();
 
             var Seller = new Seller
             {
-                OwnerId = request.OwnerId,
-                SellerName = request.Latitude.Value+" "+request.Longitude.Value,
+                OwnerId = userId,
+                SellerName = request.SellerName,
                 SellerId = SellerId,
-                Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 },
-                Banner = null
+                Banner = null,
+                CreatedAt = DateTime.Now
             };
+
             _db.Sellers.Add(Seller);
             await _db.SaveChangesAsync();
 
@@ -89,9 +117,33 @@ namespace ThesisTestAPI.Services
                 return null;
             }
             Seller.SellerName = string.IsNullOrEmpty(request.SellerName) ? Seller.SellerName : request.SellerName;
+            Seller.Description = string.IsNullOrEmpty(request.Description) ? Seller.Description : request.Description;
             if(request.Latitude.HasValue && request.Longitude.HasValue)
             {
                 Seller.Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 };
+            }
+            if (request.SellerPicture != null)
+            {
+                var sellerPictureName = $"{Guid.NewGuid()}_{request.SellerPicture.FileName}";
+                var contentType = request.SellerPicture.ContentType;
+                using var sellerPictureStream = request.SellerPicture.OpenReadStream();
+                if (!string.IsNullOrEmpty(Seller.SellerPicture))
+                {
+                    await _blobStorageService.DeleteFileAsync(Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+                }
+                await _blobStorageService.UploadImageAsync(sellerPictureStream, sellerPictureName, contentType, Enum.BlobContainers.SELLERPICTURE, 200);
+                Seller.SellerPicture = sellerPictureName;
+            }
+            if(request.Banner != null)
+            {
+                var bannerName = $"{Guid.NewGuid()}_{request.Banner.FileName}";
+                var contentType = request.Banner.ContentType;
+                using var bannerStream = request.Banner.OpenReadStream();
+                if (!string.IsNullOrEmpty(Seller.Banner)){
+                    await _blobStorageService.DeleteFileAsync(Seller.Banner, Enum.BlobContainers.BANNER);
+                }
+                await _blobStorageService.UploadImageFreeAspectAsync(bannerStream, bannerName, contentType, Enum.BlobContainers.BANNER);
+                Seller.Banner = bannerName;
             }
             _db.Sellers.Update(Seller);
             await _db.SaveChangesAsync();

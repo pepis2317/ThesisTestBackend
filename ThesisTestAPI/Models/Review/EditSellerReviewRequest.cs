@@ -8,5 +8,6 @@ namespace ThesisTestAPI.Models.Review
     {
         public Guid ReviewId { get; set; }
         public string Review { get; set; } = string.Empty;
+        public int Rating { get; set; }
     }
 }

@@ -1,9 +1,9 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
-namespace ThesisTestAPI.Models.OrderRequests
+namespace ThesisTestAPI.Models.Review
 {
-    public class GetSellerOrderRequests: IRequest<(ProblemDetails?, PaginatedOrderRequestsResponse)>
+    public class GetUserReviewsRequest:IRequest<(ProblemDetails?, PaginatedReviewsResponse?)>
     {
         public Guid UserId { get; set; }
         public int pageSize { get; set; }

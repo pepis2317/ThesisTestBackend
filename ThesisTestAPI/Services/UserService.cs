@@ -2,6 +2,7 @@
 using Azure.Storage.Sas;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using NetTopologySuite.Geometries;
 using System.ComponentModel;
 using System.Reflection.Metadata;
 using System.Security.Cryptography;
@@ -60,6 +61,10 @@ namespace ThesisTestAPI.Services
                 Rating = user.Rating,
                 Pfp = pfp,
                 Role = user.Role,
+                Latitude = user.Location.Coordinate.Y,
+                Longitude = user.Location.Coordinate.X,
+                Address = user.Address,
+                PostalCode = user.PostalCode,
             };
         }
         public async Task<UserResponse> Register(UserRegisterRequest request)
@@ -71,10 +76,25 @@ namespace ThesisTestAPI.Services
                 Email = request.Email,
                 Phone = request.Phone,
                 Password = _protector.Protect(request.Password),
-                ExpoPushToken = request.ExpoPushToken,
-                Platform = request.Platform,
+                Role = request.Role,
+                Address = request.Address,
+                PostalCode = request.PostalCode,
+            };
+            if(request.Longitude!= null && request.Latitude!= null)
+            {
+                user.Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 };
+            }
+            var wallet = new Wallet
+            {
+                WalletId = Guid.NewGuid(),
+                UserId = user.UserId,
+                Currency = "IDR",
+                BalanceMinor = 0,
+                Status = "Active",
+                CreatedAt = DateTime.UtcNow,
             };
             _db.Users.Add(user);
+            _db.Wallets.Add(wallet);
             await _db.SaveChangesAsync();
             return new UserResponse
             {
@@ -96,7 +116,7 @@ namespace ThesisTestAPI.Services
             }
             return Convert.ToBase64String(randomBytes);
         }
-        public async Task<LoginResponse?>Login(string email, string? expoPushToken, string? platform)
+        public async Task<LoginResponse?>Login(string email)
         {
             var user = await _db.Users.FirstOrDefaultAsync(q=>q.Email == email);
             if(user == null)
@@ -107,11 +127,6 @@ namespace ThesisTestAPI.Services
             var refreshToken = GenerateRefreshToken();
             user.RefreshToken = refreshToken;
             user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7);
-            if( expoPushToken!=null && platform != null)
-            {
-                user.ExpoPushToken = expoPushToken;
-                user.Platform = platform;
-            }
             _db.Users.Update(user);
             await _db.SaveChangesAsync();
             return new LoginResponse
@@ -172,6 +187,16 @@ namespace ThesisTestAPI.Services
             user.Password = string.IsNullOrEmpty(request.Password) ? user.Password : _protector.Protect(request.Password);
             user.Phone = string.IsNullOrEmpty(request.Phone) ? user.Phone : request.Phone;
             user.Role = string.IsNullOrEmpty(request.Role)? user.Role : request.Role;
+            user.Address = string.IsNullOrEmpty(request.Address) ? user.Address : request.Address;
+            if(request.Latitude != null && request.Longitude != null)
+            {
+                user.Location = new Point(request.Longitude.Value, request.Latitude.Value) { SRID = 4326 };
+            }
+            if(request.PostalCode != null)
+            {
+                user.PostalCode = request.PostalCode;
+            }
+            
             user.UpdatedAt = DateTime.Now;
             _db.Users.Update(user);
             await _db.SaveChangesAsync();

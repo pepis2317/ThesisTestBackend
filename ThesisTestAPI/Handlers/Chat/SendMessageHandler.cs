@@ -8,6 +8,12 @@ using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Chat
 {
+    public class ConversationNotif
+    {
+        public Guid ConversationId { get; set; }
+        public Guid SenderId {  get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
     public class SendMessageHandler : IRequestHandler<SendMessageRequest, (ProblemDetails?, MessageResponse?)>
     {
         private readonly ThesisDbContext _db;
@@ -44,7 +50,8 @@ namespace ThesisTestAPI.Handlers.Chat
                 ConversationId = request.ConversationId,
                 SenderId = request.SenderId,
                 Message1 = request.Text ?? "",
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                HasAttachments = request.HasAttachments
             };
 
             _db.Messages.Add(msg);
@@ -52,7 +59,8 @@ namespace ThesisTestAPI.Handlers.Chat
             {
                 await _attachmentService.CreateMessageAttachments(new Models.MessageAttachments.CreateMessageAttachmentRequest { MessageId = msg.MessageId,Files = request.Files });
             }
-            
+            var conversation = await _db.Conversations.Where(q => q.ConversationId == request.ConversationId).FirstOrDefaultAsync();
+            conversation.UpdatedAt = DateTimeOffset.Now;
             var payload = new MessageResponse()
             {
                 MessageId = msg.MessageId,
@@ -63,6 +71,14 @@ namespace ThesisTestAPI.Handlers.Chat
                 DeletedAt = msg.DeletedAt,
                 HasAttachments = msg.HasAttachments
             };
+
+            var notif = new ConversationNotif()
+            {
+                ConversationId = msg.ConversationId,
+                Message = msg.Message1,
+                SenderId = msg.SenderId,
+            };
+
             
             await _db.SaveChangesAsync();
             await _hub.Clients.Group(ChatHub.GroupName(request.ConversationId)).SendAsync("MessageCreated", payload);
@@ -71,6 +87,7 @@ namespace ThesisTestAPI.Handlers.Chat
 
             foreach (var member in conversationMembers)
             {
+                await _hub.Clients.Group(member.UserId.ToString()).SendAsync("NewMessage", notif);
                 await _notificationService.SendNotification($"{sender.UserName} sent a new message", member.UserId);
             }
 

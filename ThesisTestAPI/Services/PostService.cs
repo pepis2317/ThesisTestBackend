@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using System.Xml.Linq;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Models.Post;
 
@@ -29,6 +30,20 @@ namespace ThesisTestAPI.Services
                 PostNavigation = content
             };
             _db.Posts.Add(post);
+            var created = new List<Image>();
+            foreach(var file in request.Files.Where(q => q.Length > 0))
+            {
+                var contentType = file.ContentType;
+                using var stream = file.OpenReadStream();
+                created.Add(new Image {
+                    ImageId = Guid.NewGuid(),
+                    ContentId = contentId,
+                    ImageName = file.FileName,
+                    CreatedAt = DateTimeOffset.Now,
+                });
+                await _blobStorageService.UploadImageAsync(stream, file.FileName, contentType, Enum.BlobContainers.IMAGES, 200);
+            }
+            _db.Images.AddRange(created);
             await _db.SaveChangesAsync();
             return contentId;
         }
@@ -44,7 +59,7 @@ namespace ThesisTestAPI.Services
         }
         public async Task<string?> EditPost(EditPostRequest request)
         {
-            var post = await _db.Posts.Where(q => q.PostId == request.PostId).FirstOrDefaultAsync();
+            var post = await _db.Posts.Include(q=>q.PostNavigation).Where(q => q.PostId == request.PostId).FirstOrDefaultAsync();
             if (post == null)
             {
                 return null;
@@ -88,10 +103,29 @@ namespace ThesisTestAPI.Services
             }
             var lastPost = posts.LastOrDefault();
             var postIds = posts.Select(q => q.PostId).ToList();
+            var commentCounts = await _db.Comments
+                .Where(q => postIds.Contains(q.TargetContentId))
+                .GroupBy(q => q.TargetContentId)
+                .Select(g => new
+                {
+                    TargetContentId = g.Key,
+                    CommentCount = g.Count()
+                })
+                .ToListAsync();
+            var likes = await _db.Likes.Include(q => q.LikeNavigation).Where(q => postIds.Contains(q.LikeNavigation.ContentId))
+                .GroupBy(q => q.LikeNavigation.ContentId).Select(q => new
+                {
+                    ContentId = q.Key,
+                    Likes = q.Count()
+                }).ToListAsync();
+            var liked = await _db.Likes.Include(q => q.LikeNavigation).Where(q => postIds.Contains(q.LikeNavigation.ContentId) && q.LikeNavigation.AuthorId == request.UserId).ToListAsync();
             var thumbnails = await _db.Images.Where(q => postIds.Contains(q.ContentId)).GroupBy(q => q.ContentId).Select(g => g.OrderBy(img => img.CreatedAt).FirstOrDefault()).ToListAsync();
             var postsList = new List<PostResponse>();
             foreach (var post in posts)
             {
+                var isLiked = liked.Where(q => q.LikeNavigation.ContentId == post.PostId).Any();
+                var likeCount = likes.Where(q => q.ContentId == post.PostId).Select(q => q.Likes).FirstOrDefault();
+                var commentCount = commentCounts.Where(q => q.TargetContentId == post.PostId).FirstOrDefault();
                 var thumbnail = thumbnails.Where(q => q.ContentId == post.PostId).FirstOrDefault();
                 var images = await _db.Images.Where(q => q.ContentId == post.PostId).CountAsync();
                 var thumbnailUrl = "";
@@ -105,6 +139,9 @@ namespace ThesisTestAPI.Services
                     PostId = post.PostId,
                     Caption = post.Caption,
                     isMultipleImages = images > 1,
+                    Liked = isLiked,
+                    Likes = likeCount,
+                    Comments = commentCount != null ? commentCount.CommentCount : 0,
                     Thumbnail = thumbnailUrl,
                     CreatedAt = post.PostNavigation.CreatedAt,
                     UpdatedAt = post.PostNavigation.UpdatedAt,

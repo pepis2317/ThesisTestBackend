@@ -7,7 +7,7 @@ public partial class RefundRequest
 {
     public Guid RefundRequestId { get; set; }
 
-    public string Message { get; set; } = null!;
+    public string? Message { get; set; }
 
     public string Status { get; set; } = null!;
 
@@ -16,6 +16,10 @@ public partial class RefundRequest
     public Guid ProcessId { get; set; }
 
     public Guid SellerUserId { get; set; }
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public DateTimeOffset? UpdatedAt { get; set; }
 
     public virtual Process Process { get; set; } = null!;
 

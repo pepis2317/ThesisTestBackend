@@ -19,7 +19,7 @@ namespace ThesisTestAPI.Handlers.Comment
         }
         public async Task<(ProblemDetails?, string?)> Handle(EditCommentRequest request, CancellationToken cancellationToken)
         {
-            var comment = await _db.Comments.Where(q => q.CommentId == request.CommentId).FirstOrDefaultAsync();
+            var comment = await _db.Comments.Include(q=>q.CommentNavigation).Where(q => q.CommentId == request.CommentId).FirstOrDefaultAsync();
             if (comment != null)
             {
                 comment.Comment1 = request.Comment;

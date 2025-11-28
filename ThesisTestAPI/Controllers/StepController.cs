@@ -34,7 +34,7 @@ namespace ThesisTestAPI.Controllers
             return Ok(result.Item2);
         }
         [HttpPut("edit-step")]
-        public async Task<IActionResult> EditStep([FromBody] EditStepRequest request)
+        public async Task<IActionResult> EditStep( EditStepRequest request)
         {
             var result = await _mediator.Send(request);
             if (result.Item1 != null)

@@ -12,25 +12,37 @@ namespace ThesisTestAPI.Handlers.Seller
     {
         private readonly ThesisDbContext _db;
         private readonly BlobStorageService _blobStorageService;
-        public GetSellerFromOwnerIdHandler(ThesisDbContext dB, BlobStorageService blobStorageService)
+        private readonly UserService _userService;
+        public GetSellerFromOwnerIdHandler(ThesisDbContext dB, BlobStorageService blobStorageService, UserService userService)
         {
             _db = dB;
             _blobStorageService = blobStorageService;
+            _userService = userService;
         }
 
         public async Task<(ProblemDetails?, SellerResponse?)> Handle(GetSellerFromOwnerIdRequest request, CancellationToken cancellationToken)
         {
             var Seller = await _db.Sellers.Where(q => q.OwnerId == request.OwnerId).FirstOrDefaultAsync();
-            var pfp = "";
-            if(Seller.SellerPicture!= null)
+            var sellerPicture = "";
+            if(!string.IsNullOrEmpty(Seller.SellerPicture))
             {
-                pfp = await _blobStorageService.GetTemporaryImageUrl(Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+                sellerPicture = await _blobStorageService.GetTemporaryImageUrl(Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
             }
+            var banner = "";
+            if (!string.IsNullOrEmpty(Seller.Banner))
+            {
+                banner = await _blobStorageService.GetTemporaryImageUrl(Seller.Banner, Enum.BlobContainers.BANNER);
+            }
+            var owner = await _userService.Get(Seller.OwnerId);
             return (null, new SellerResponse
             {
                 SellerId = Seller.SellerId,
                 SellerName = Seller.SellerName,
-                SellerPicture = Seller.SellerPicture
+                SellerPicture = sellerPicture,
+                Owner = owner,
+                Banner = banner,
+                Description = Seller.Description,
+                CreatedAt = (DateTime) Seller.CreatedAt
             });
         }
     }

@@ -6,6 +6,7 @@ namespace ThesisTestAPI.Models.Post
 {
     public class PostQuery : IRequest<(ProblemDetails?, PaginatedPostResponse?)>
     {
+        public Guid UserId { get; set; }
         public Guid AuthorId{ get; set; }
         public int pageSize { get; set; }
         public Guid? LastPostId{ get; set; }

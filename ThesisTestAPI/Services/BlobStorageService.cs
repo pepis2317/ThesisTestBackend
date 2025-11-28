@@ -4,6 +4,7 @@ using Azure.Storage.Sas;
 using Microsoft.AspNetCore.StaticFiles;
 using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Security.Cryptography;
 using ThesisTestAPI.Models.MessageAttachments;
@@ -104,6 +105,114 @@ namespace ThesisTestAPI.Services
             }
             return false;
         }
+        public async Task<string> UploadImageFreeAspectAsync(
+                Stream imageStream,
+                string fileName,
+                string contentType,
+                string containerName,
+                int? maxWidth = null,
+                int? maxHeight = null,
+                long jpegQuality = 85L)
+        {
+            try
+            {
+                // ensure we start at 0
+                if (imageStream.CanSeek) imageStream.Position = 0;
+
+                using var sourceImage = Image.FromStream(imageStream);
+
+                // Determine target size (preserve aspect)
+                var (targetW, targetH) = ComputeFitSize(
+                    sourceImage.Width,
+                    sourceImage.Height,
+                    maxWidth,
+                    maxHeight
+                );
+
+                using var outputStream = new MemoryStream();
+
+                // If no resizing needed and we can just pass through, re-encode as requested format anyway
+                // (If you truly want byte-for-byte passthrough, copy the incoming stream instead.)
+                using (var canvas = new Bitmap(targetW, targetH))
+                using (var g = Graphics.FromImage(canvas))
+                {
+                    g.SmoothingMode = SmoothingMode.HighQuality;
+                    g.CompositingQuality = CompositingQuality.HighQuality;
+                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+
+                    g.DrawImage(sourceImage, 0, 0, targetW, targetH);
+
+                    // Choose encoder based on contentType (default to JPEG)
+                    if (string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase))
+                    {
+                        canvas.Save(outputStream, ImageFormat.Png);
+                    }
+                    else if (string.Equals(contentType, "image/webp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // System.Drawing doesn't natively support WebP. Fall back to JPEG.
+                        var jpgEncoder = GetEncoder(ImageFormat.Jpeg);
+                        var encParams = new EncoderParameters(1);
+                        encParams.Param[0] = new EncoderParameter(Encoder.Quality, jpegQuality);
+                        canvas.Save(outputStream, jpgEncoder, encParams);
+                        contentType = "image/jpeg";
+                        // Optionally also adjust fileName extension here.
+                    }
+                    else
+                    {
+                        // JPEG
+                        var jpgEncoder = GetEncoder(ImageFormat.Jpeg);
+                        var encParams = new EncoderParameters(1);
+                        encParams.Param[0] = new EncoderParameter(Encoder.Quality, jpegQuality);
+                        canvas.Save(outputStream, jpgEncoder, encParams);
+                        if (!contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase))
+                            contentType = "image/jpeg";
+                    }
+                }
+
+                outputStream.Position = 0;
+
+                var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
+                await containerClient.CreateIfNotExistsAsync();
+                var blobClient = containerClient.GetBlobClient(fileName);
+
+                var headers = new BlobHttpHeaders { ContentType = contentType };
+
+                // If you want overwrite semantics, use the UploadAsync(stream, overwrite: true) overload,
+                // or pass BlobUploadOptions. Here we also set headers.
+                await blobClient.UploadAsync(outputStream, new BlobUploadOptions { HttpHeaders = headers });
+
+                return blobClient.Uri.ToString();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error uploading image: {ex}");
+            }
+        }
+
+        // --- helpers ---
+
+        private static (int width, int height) ComputeFitSize(int srcW, int srcH, int? maxW, int? maxH)
+        {
+            // No limits at all -> original size
+            if (maxW is null && maxH is null)
+                return (srcW, srcH);
+
+            // Treat missing side as infinitely large
+            double limitW = maxW ?? double.PositiveInfinity;
+            double limitH = maxH ?? double.PositiveInfinity;
+
+            // If already within bounds, keep original
+            if (srcW <= limitW && srcH <= limitH)
+                return (srcW, srcH);
+
+            // Scale down by the tighter constraint
+            double scale = Math.Min(limitW / srcW, limitH / srcH);
+            int w = Math.Max(1, (int)Math.Round(srcW * scale));
+            int h = Math.Max(1, (int)Math.Round(srcH * scale));
+            return (w, h);
+        }
+
         public async Task<string> UploadImageAsync(Stream imageStream, string fileName, string contentType, string containerName, int targetSize)
         {
             try

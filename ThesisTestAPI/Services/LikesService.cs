@@ -46,7 +46,7 @@ namespace ThesisTestAPI.Services
         }
         public async Task<string> Unlike(UnlikeRequest request)
         {
-            await _db.Reactions.Where(q => q.ReactionId == request.LikeId).ExecuteDeleteAsync();
+            await _db.Reactions.Where(q => q.ContentId == request.ContentId && q.AuthorId == request.UserId).ExecuteDeleteAsync();
             return "Successfully unliked";
         }
     }

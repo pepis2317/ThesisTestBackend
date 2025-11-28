@@ -69,7 +69,7 @@ namespace ThesisTestAPI.Controllers
             return Ok(result.Item2);
         }
         [HttpPut("edit-seller")]
-        public async Task<IActionResult> EditProducer([FromBody]EditSellerRequest request)
+        public async Task<IActionResult> EditProducer(EditSellerRequest request)
         {
             var result = await _mediator.Send(request);
             if (result.Item1 != null)

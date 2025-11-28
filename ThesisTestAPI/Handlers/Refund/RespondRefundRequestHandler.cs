@@ -120,6 +120,7 @@ namespace ThesisTestAPI.Handlers.Refund
             }
             var finalStep = steps.Where(q => q.ProcessId == refundRequest.ProcessId).OrderByDescending(q => q.CreatedAt).FirstOrDefault();
             refundRequest.Status = RequestStatuses.ACCEPTED;
+            refundRequest.UpdatedAt = DateTimeOffset.Now;
             finalStep.Status = StepStatuses.CANCELLED;
             finalStep.UpdatedAt = DateTimeOffset.Now;
             refundRequest.Process.Status = ProcessStatuses.CANCELLED;

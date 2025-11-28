@@ -28,6 +28,14 @@ namespace ThesisTestAPI.Handlers.Conversation
               .Where(q => conversationIds.Contains(q.ConversationId))
               .OrderByDescending(q => q.UpdatedAt ?? q.CreatedAt)
               .ToListAsync();
+            var latestMessages = await _db.Messages
+                .Where(m => conversationIds.Contains(m.ConversationId))
+                .GroupBy(m => m.ConversationId)
+                .Select(g => g.OrderByDescending(m => m.CreatedAt).Where(q=>q.Message1!= null && q.Message1.Length >1).First())
+                .ToListAsync();
+            var memberIds = conversations.SelectMany(c => c.ConversationMembers).Select(cm => cm.User.UserId).Distinct().ToList();
+            var sellers = await _db.Sellers.Where(q => memberIds.Contains(q.OwnerId)).ToListAsync();
+
 
             var list = new List<ConversationResponse>();
             foreach (var conversation in conversations)
@@ -35,15 +43,29 @@ namespace ThesisTestAPI.Handlers.Conversation
                 var response = new ConversationResponse
                 {
                     ConversationId = conversation.ConversationId,
-                    Name = conversation.ConversationName,
                     CreatedAt = conversation.CreatedAt,
                     UpdatedAt = conversation.UpdatedAt,
                 };
-                var otherMember = conversation.ConversationMembers.Where(q => q.UserId != request.UserId).Select(q=>q.User).FirstOrDefault();
-                if (otherMember != null && !string.IsNullOrEmpty(otherMember.Pfp))
+                var latestMessage = latestMessages.Where(q=>q.ConversationId == conversation.ConversationId).FirstOrDefault();
+                var otherMember = conversation.ConversationMembers.Where(q => q.UserId != request.UserId).Select(q => q.User).FirstOrDefault();
+                if (otherMember != null)
                 {
-                    response.Picture = await _blobStorageService.GetTemporaryImageUrl(otherMember.Pfp, Enum.BlobContainers.PFP);
+                    response.Name = otherMember.UserName;
+                    if (!string.IsNullOrEmpty(otherMember.Pfp))
+                    {
+                        response.Picture = await _blobStorageService.GetTemporaryImageUrl(otherMember.Pfp, Enum.BlobContainers.PFP);
+                    }
+                    if (otherMember.Role == "Seller")
+                    {
+                        var name = sellers.Where(q => q.OwnerId == otherMember.UserId).Select(q => q.SellerName).FirstOrDefault();
+                        response.SellerName = name;
+                    }
+                    if (latestMessage != null)
+                    {
+                        response.LatestMessage = latestMessage.SenderId == otherMember.UserId ? latestMessage.Message1 : "(You) " + latestMessage.Message1;
+                    }
                 }
+
                 list.Add(response);
             }
             var total = await _db.Conversations.Where(q => conversationIds.Contains(q.ConversationId)).CountAsync();

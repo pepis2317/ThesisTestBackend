@@ -6,6 +6,7 @@ namespace ThesisTestAPI.Models.OrderRequests
     public class GetOrderRequests : IRequest<(ProblemDetails?, PaginatedOrderRequestsResponse?)>
     {
         public Guid UserId {  get; set; }
+        public bool IsSeller { get; set; }
         public int pageSize { get; set; }
         public int pageNumber { get; set; }
     }

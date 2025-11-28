@@ -21,7 +21,18 @@ namespace ThesisTestAPI.Handlers.Shipment
                 Name = q.Name,
                 Description = q.Description,
                 OrderId = q.OrderId,
-                Status = q.Status
+                Status = q.Status,
+                Quantity = q.Quantity,
+                Height = q.Height,
+                Length = q.Length,
+                Weight = q.Weight,
+                Width = q.Width,
+                Category = q.Category,
+                CourierCompany = q.CourierCompany,
+                CourierType = q.CourierType,
+                OrderNote = q.OrderNote,
+                OriginNote = q.OriginNote,
+                DestinationNote = q.DestinationNote,
             }).FirstOrDefaultAsync();
             return (null, shipment);
         }

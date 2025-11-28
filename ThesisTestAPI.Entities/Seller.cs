@@ -22,6 +22,8 @@ public partial class Seller
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? Description { get; set; }
+
     public virtual User Owner { get; set; } = null!;
 
     public virtual ICollection<Request> Requests { get; set; } = new List<Request>();

@@ -10,5 +10,8 @@
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
         public int Comments { get; set; }
+        public int Likes { get; set; }
+        public bool Liked { get; set; }
+        public int? Rating { get; set; }
     }
 }

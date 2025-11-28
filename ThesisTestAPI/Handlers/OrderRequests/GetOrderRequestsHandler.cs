@@ -20,10 +20,11 @@ namespace ThesisTestAPI.Handlers.OrderRequests
         {
             var orderRequests = await _db.Contents
                 .Include(c => c.Request).ThenInclude(r => r.Seller)
+                .Include(c => c.Author)
                 .Skip((request.pageNumber - 1) * request.pageSize)
-                .Where(c => c.AuthorId == request.UserId && c.Request != null)
+                .Where(c => (request.IsSeller == true? c.Request.Seller.OwnerId == request.UserId : c.AuthorId == request.UserId )&& c.Request != null)
                 .OrderByDescending(c => c.CreatedAt)
-                .Select(c => new{ Request = c.Request, CreatedAt = c.CreatedAt}).ToListAsync();
+                .Select(c => new{ Request = c.Request, Author = c.Author, CreatedAt = c.CreatedAt}).ToListAsync();
             var result = new List<OrderRequestResponse>();
             foreach (var orderRequest in orderRequests)
             {
@@ -32,11 +33,18 @@ namespace ThesisTestAPI.Handlers.OrderRequests
                     RequestId = orderRequest.Request.RequestId,
                     Title = orderRequest.Request.RequestTitle,
                     Status = orderRequest.Request.RequestStatus,
-                    Name = orderRequest.Request.Seller.SellerName
+                    SellerName = orderRequest.Request.Seller.SellerName,
+                    BuyerName = orderRequest.Author.UserName,
+                    BuyerUserId = orderRequest.Author.UserId,
+                    SellerId = orderRequest.Request.SellerId
                 };
                 if (!string.IsNullOrEmpty(orderRequest.Request.Seller.SellerPicture))
                 {
-                    order.PictureUrl = await _blobStorageService.GetTemporaryImageUrl(orderRequest.Request.Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+                    order.SellerPictureUrl = await _blobStorageService.GetTemporaryImageUrl(orderRequest.Request.Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+                }
+                if (!string.IsNullOrEmpty(orderRequest.Author.Pfp))
+                {
+                    order.BuyerPictureUrl = await _blobStorageService.GetTemporaryImageUrl(orderRequest.Author.Pfp, Enum.BlobContainers.PFP);
                 }
                 result.Add(order);
             }

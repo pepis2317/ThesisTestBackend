@@ -7,9 +7,6 @@ namespace ThesisTestAPI.Models.User
     {
         public required string Email {  get; set; }
         public required string Password {  get; set; }
-        public string? DeviceId { get; set; }
-        public string? ExpoPushToken { get; set; }
-        public string? Platform { get; set; }
 
     }
 }

@@ -10,6 +10,9 @@ namespace ThesisTestAPI.Models.Producer
         public string? SellerName { get; set; }
         public double? Latitude { get; set; }
         public double? Longitude { get; set; }
+        public IFormFile? Banner {  get; set; }
+        public IFormFile? SellerPicture { get; set; }
+        public string? Description { get; set; }
 
     }
 }

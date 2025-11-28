@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using NetTopologySuite.Geometries;
 
 namespace ThesisTestAPI.Entities;
 
@@ -36,6 +37,8 @@ public partial class User
     public string? ExpoPushToken { get; set; }
 
     public string? Platform { get; set; }
+
+    public Geometry? Location { get; set; }
 
     public virtual ICollection<Content> Contents { get; set; } = new List<Content>();
 

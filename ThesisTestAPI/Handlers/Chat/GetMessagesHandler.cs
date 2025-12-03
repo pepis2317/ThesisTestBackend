@@ -4,7 +4,9 @@ using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using ThesisTestAPI.Entities;
+using ThesisTestAPI.Enum;
 using ThesisTestAPI.Models.Chat;
+using ThesisTestAPI.Models.MessageAttachments;
 using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Chat
@@ -12,16 +14,18 @@ namespace ThesisTestAPI.Handlers.Chat
     public class GetMessagesHandler : IRequestHandler<GetMessagesQuery, (ProblemDetails?, CursorPage<MessageResponse>?)>
     {
         private readonly ThesisDbContext _db;
-        public GetMessagesHandler(ThesisDbContext db)
+        private readonly BlobStorageService _blobStorageService;
+        public GetMessagesHandler(ThesisDbContext db, BlobStorageService blobStorageService)
         {
             _db = db;
+            _blobStorageService = blobStorageService;
         }
 
         public async Task<(ProblemDetails?, CursorPage<MessageResponse>?)> Handle(GetMessagesQuery request, CancellationToken cancellationToken)
         {
             var limit = Math.Clamp(request.Limit <= 0 ? 50 : request.Limit, 1, 200);
             var q = _db.Messages.AsNoTracking()
-                .Where(m => m.ConversationId == request.ConversationId);
+                .Include(q=>q.MessageAttachments).Where(m => m.ConversationId == request.ConversationId);
 
             IOrderedQueryable<Message> ordered;
             bool backward = !string.IsNullOrEmpty(request.Before);
@@ -70,17 +74,38 @@ namespace ThesisTestAPI.Handlers.Chat
                 ? pageRaw.AsEnumerable().Reverse().ToList() // DESC -> ASC
                 : pageRaw;                                   // already ASC
 
-            // 4) Map
-            var items = rows.Select(m => new MessageResponse
+            //// 4) Map
+            var items = new List<MessageResponse>();
+            foreach (var row in rows)
             {
-                MessageId = m.MessageId,
-                SenderId = m.SenderId,
-                Message = m.Message1,
-                CreatedAt = m.CreatedAt,
-                UpdatedAt = m.UpdatedAt,
-                DeletedAt = m.DeletedAt,
-                HasAttachments = m.HasAttachments
-            }).ToList();
+                var item = new MessageResponse
+                {
+                    MessageId = row.MessageId,
+                    SenderId = row.SenderId,
+                    Message = row.Message1,
+                    CreatedAt = row.CreatedAt,
+                    UpdatedAt = row.UpdatedAt,
+                    DeletedAt = row.DeletedAt,
+                    Sent = true
+                };
+                if (row.MessageAttachments.Any())
+                {
+                    var attachmentDtos = new List<AttachmentDTO>();
+                    foreach( var attachment in row.MessageAttachments)
+                    {
+                        var sas = await _blobStorageService.GenerateSasUriAsync(
+                             attachmentId: attachment.AttachmentId,
+                             blobName: attachment.BlobFileName,
+                             fileName: attachment.FileName,
+                             mimeType: attachment.FileType,
+                             containerName: BlobContainers.MESSAGEATTACHMENTS
+                         );
+                        attachmentDtos.Add(sas);
+                    }
+                    item.Attachments = attachmentDtos;
+                }
+                items.Add(item);
+            }
 
             // 5) Cursors (rows are ASC here)
             string? next = null;

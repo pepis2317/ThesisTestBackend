@@ -1,5 +1,6 @@
 ﻿using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using ThesisTestAPI.Models.MessageAttachments;
 
 namespace ThesisTestAPI.Models.Chat
 {
@@ -23,7 +24,8 @@ namespace ThesisTestAPI.Models.Chat
         public Guid MessageId {  get; set; }
         public string? Message { get; set; } = string.Empty;
         public Guid SenderId { get; set; }
-        public bool? HasAttachments { get;set; }
+        public List<AttachmentDTO>? Attachments { get; set; } = new();
+        public bool Sent { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
         public DateTimeOffset? DeletedAt { get; set; }

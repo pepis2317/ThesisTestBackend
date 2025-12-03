@@ -27,7 +27,7 @@ namespace ThesisTestAPI.Handlers.OrderRequests
                 SellerName = orderRequest.Seller.SellerName,
                 BuyerName = orderRequest.RequestNavigation.Author.UserName,
                 BuyerUserId = orderRequest.RequestNavigation.Author.UserId,
-                SellerId = orderRequest.SellerId
+                SellerId = orderRequest.SellerId,
             };
             if (!string.IsNullOrEmpty(orderRequest.Seller.SellerPicture))
             {
@@ -36,6 +36,10 @@ namespace ThesisTestAPI.Handlers.OrderRequests
             if (!string.IsNullOrEmpty(orderRequest.RequestNavigation.Author.Pfp))
             {
                 order.BuyerPictureUrl = await _blobStorageService.GetTemporaryImageUrl(orderRequest.RequestNavigation.Author.Pfp, Enum.BlobContainers.PFP);
+            }
+            if (!string.IsNullOrEmpty(orderRequest.DeclineReason))
+            {
+                order.DeclineReason = orderRequest.DeclineReason;
             }
             return (null, order);
         }

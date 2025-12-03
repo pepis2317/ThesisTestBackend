@@ -42,6 +42,8 @@ namespace ThesisTestAPI.Handlers.Chat
             }
             message.Message1 = "Message has been deleted";
             message.DeletedAt = DateTimeOffset.Now;
+            message.HasAttachments = false;
+            _db.MessageAttachments.RemoveRange(attachments);
             _db.Messages.Update(message);
             await _db.SaveChangesAsync();
             var payload = new MessageResponse()
@@ -52,7 +54,8 @@ namespace ThesisTestAPI.Handlers.Chat
                 CreatedAt = message.CreatedAt,
                 UpdatedAt = message.UpdatedAt,
                 DeletedAt = message.DeletedAt,
-                HasAttachments = message.HasAttachments,
+                Attachments = null,
+                Sent = true
             };
             await _hub.Clients.Group(ChatHub.GroupName(message.ConversationId)).SendAsync("MessageDeleted", payload);
             return (null, payload);

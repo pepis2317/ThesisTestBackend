@@ -7,5 +7,6 @@ namespace ThesisTestAPI.Models.OrderRequests
     {
         public Guid RequestId {  get; set; }
         public string Status {  get; set; } = string.Empty;
+        public string? DeclineReason { get; set; }
     }
 }

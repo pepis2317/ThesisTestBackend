@@ -37,8 +37,6 @@ public partial class ThesisDbContext : DbContext
 
     public virtual DbSet<Notification> Notifications { get; set; }
 
-    public virtual DbSet<PayShipmentPreset> PayShipmentPresets { get; set; }
-
     public virtual DbSet<Post> Posts { get; set; }
 
     public virtual DbSet<Process> Processes { get; set; }
@@ -246,39 +244,6 @@ public partial class ThesisDbContext : DbContext
                 .HasConstraintName("FK__Notificat__UserI__0FEC5ADD");
         });
 
-        modelBuilder.Entity<PayShipmentPreset>(entity =>
-        {
-            entity.HasKey(e => e.PresetId).HasName("PK__PayShipm__69BA09E4224D295E");
-
-            entity.Property(e => e.PresetId).ValueGeneratedNever();
-            entity.Property(e => e.CourierCompany)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.CourierType)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.DeliveryType)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.DestinationNote)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.Method)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.OrderNote)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-            entity.Property(e => e.OriginNote)
-                .HasMaxLength(255)
-                .IsUnicode(false);
-
-            entity.HasOne(d => d.Transaction).WithMany(p => p.PayShipmentPresets)
-                .HasForeignKey(d => d.TransactionId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK__PayShipme__Trans__7AF13DF7");
-        });
-
         modelBuilder.Entity<Post>(entity =>
         {
             entity.HasKey(e => e.PostId).HasName("PK__Posts__AA1260182C4741E2");
@@ -374,6 +339,7 @@ public partial class ThesisDbContext : DbContext
             entity.HasKey(e => e.RequestId).HasName("PK__Requests__33A8517A88319411");
 
             entity.Property(e => e.RequestId).ValueGeneratedNever();
+            entity.Property(e => e.DeclineReason).HasMaxLength(255);
             entity.Property(e => e.RequestMessage).HasMaxLength(255);
             entity.Property(e => e.RequestStatus)
                 .HasMaxLength(255)
@@ -445,15 +411,11 @@ public partial class ThesisDbContext : DbContext
                 .HasMaxLength(255)
                 .IsUnicode(false);
             entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getdate())");
-            entity.Property(e => e.Description)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Description).HasMaxLength(255);
             entity.Property(e => e.DestinationNote)
                 .HasMaxLength(255)
                 .IsUnicode(false);
-            entity.Property(e => e.Name)
-                .HasMaxLength(255)
-                .IsUnicode(false);
+            entity.Property(e => e.Name).HasMaxLength(255);
             entity.Property(e => e.OrderId)
                 .HasMaxLength(255)
                 .IsUnicode(false);

@@ -15,6 +15,8 @@ public partial class Request
 
     public string RequestTitle { get; set; } = null!;
 
+    public string? DeclineReason { get; set; }
+
     public virtual ICollection<Process> Processes { get; set; } = new List<Process>();
 
     public virtual Content RequestNavigation { get; set; } = null!;

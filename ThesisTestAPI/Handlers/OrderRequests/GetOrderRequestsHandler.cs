@@ -46,6 +46,10 @@ namespace ThesisTestAPI.Handlers.OrderRequests
                 {
                     order.BuyerPictureUrl = await _blobStorageService.GetTemporaryImageUrl(orderRequest.Author.Pfp, Enum.BlobContainers.PFP);
                 }
+                if (!string.IsNullOrEmpty(orderRequest.Request.DeclineReason))
+                {
+                    order.DeclineReason = orderRequest.Request.DeclineReason;
+                }
                 result.Add(order);
             }
             var total = await _db.Contents.Include(c => c.Request).ThenInclude(r => r.Seller).Where(c => c.AuthorId == request.UserId && c.Request != null).CountAsync();

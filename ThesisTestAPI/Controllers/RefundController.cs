@@ -26,7 +26,7 @@ namespace ThesisTestAPI.Controllers
             };
             return problemDetails;
         }
-        [HttpGet("get-refunds")]
+        [HttpGet("get-all-refunds")]
         public async Task<IActionResult> Get([FromQuery]GetRefundRequest request)
         {
             var result = await _mediator.Send(request);

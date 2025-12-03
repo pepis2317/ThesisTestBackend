@@ -17,7 +17,7 @@ public partial class Shipment
 
     public DateTimeOffset? UpdatedAt { get; set; }
 
-    public string Name { get; set; } = null!;
+    public string? Name { get; set; }
 
     public string? Description { get; set; }
 

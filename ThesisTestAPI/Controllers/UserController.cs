@@ -50,6 +50,16 @@ namespace ThesisTestAPI.Controllers
             }
             return Ok(data);
         }
+        [HttpGet("get-all-logged-in-users")]
+        public async Task<IActionResult> GetAllLoggedIn([FromQuery]GetAllLoggedInUsersRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
         [HttpGet("get-user/{UserId}")]
         public async Task<IActionResult>GetById(Guid UserId)
         {

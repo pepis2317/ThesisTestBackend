@@ -33,6 +33,14 @@ namespace ThesisTestAPI.Services
             lifetime ??= TimeSpan.FromMinutes(10);
 
             // Get file properties (includes size)
+            try
+            {
+                var properties1 = await blob.GetPropertiesAsync();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
             var properties = await blob.GetPropertiesAsync();
             var sizeBytes = properties.Value.ContentLength;
 

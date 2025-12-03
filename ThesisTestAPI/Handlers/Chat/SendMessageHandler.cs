@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using ThesisTestAPI.Entities;
+using ThesisTestAPI.Enum;
 using ThesisTestAPI.Models.Chat;
+using ThesisTestAPI.Models.MessageAttachments;
 using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Chat
@@ -21,13 +23,15 @@ namespace ThesisTestAPI.Handlers.Chat
         private readonly NotificationService _notificationService;
         private readonly IHttpContextAccessor _httpContextAccessor;
         private readonly MessageAttachmentService _attachmentService;
-        public SendMessageHandler(ThesisDbContext db, NotificationService notificationService,MessageAttachmentService attachmentService, IHubContext<ChatHub> hub, IHttpContextAccessor httpContextAccessor)
+        private readonly BlobStorageService _blobStorageService;
+        public SendMessageHandler(ThesisDbContext db, BlobStorageService blobStorageService, NotificationService notificationService,MessageAttachmentService attachmentService, IHubContext<ChatHub> hub, IHttpContextAccessor httpContextAccessor)
         {
             _db = db;
             _hub = hub;
             _notificationService = notificationService;
             _httpContextAccessor = httpContextAccessor;
             _attachmentService = attachmentService;
+            _blobStorageService = blobStorageService;
         }
         public async Task<(ProblemDetails?, MessageResponse?)> Handle(SendMessageRequest request, CancellationToken cancellationToken)
         {
@@ -43,23 +47,29 @@ namespace ThesisTestAPI.Handlers.Chat
                 };
                 return (problemDetails, null);
             }
-
+            var hasAttachments = request.Files != null && request.Files.Any();
+            var messageId = Guid.NewGuid();
+            if (request.MessageId != null)
+            {
+                messageId = (Guid) request.MessageId;
+            }
             var msg = new Message
             {
-                MessageId = Guid.NewGuid(),
+                MessageId = messageId,
                 ConversationId = request.ConversationId,
                 SenderId = request.SenderId,
                 Message1 = request.Text ?? "",
                 CreatedAt = DateTimeOffset.UtcNow,
-                HasAttachments = request.HasAttachments
+                HasAttachments = hasAttachments
             };
 
             _db.Messages.Add(msg);
-            if(request.Files!= null && request.Files.Any())
+            if(hasAttachments)
             {
                 await _attachmentService.CreateMessageAttachments(new Models.MessageAttachments.CreateMessageAttachmentRequest { MessageId = msg.MessageId,Files = request.Files });
             }
             var conversation = await _db.Conversations.Where(q => q.ConversationId == request.ConversationId).FirstOrDefaultAsync();
+            var attachments = await _db.MessageAttachments.Where(q => q.MessageId == msg.MessageId).OrderByDescending(q=>q.CreatedAt).ToListAsync();
             conversation.UpdatedAt = DateTimeOffset.Now;
             var payload = new MessageResponse()
             {
@@ -69,8 +79,24 @@ namespace ThesisTestAPI.Handlers.Chat
                 CreatedAt = msg.CreatedAt,
                 UpdatedAt = msg.UpdatedAt,
                 DeletedAt = msg.DeletedAt,
-                HasAttachments = msg.HasAttachments
+                Sent = true
             };
+            if (hasAttachments)
+            {
+                var attachmentDtos = new List<AttachmentDTO>();
+                foreach(var attachment in attachments)
+                {
+                    var sas = await _blobStorageService.GenerateSasUriAsync(
+                             attachmentId: attachment.AttachmentId,
+                             blobName: attachment.BlobFileName,
+                             fileName: attachment.FileName,
+                             mimeType: attachment.FileType,
+                             containerName: BlobContainers.MESSAGEATTACHMENTS
+                         );
+                    attachmentDtos.Add(sas);
+                }
+                payload.Attachments = attachmentDtos;
+            }
 
             var notif = new ConversationNotif()
             {

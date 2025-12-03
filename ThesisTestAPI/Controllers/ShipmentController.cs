@@ -26,6 +26,16 @@ namespace ThesisTestAPI.Controllers
             };
             return problemDetails;
         }
+        [HttpGet("get-all-shipments")]
+        public async Task<IActionResult> GetAllShipments([FromQuery]GetAllShipmentsRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
         [HttpGet("get-shipment")]
         public async Task<IActionResult> GetShipment([FromQuery]GetShipmentRequest request)
         {

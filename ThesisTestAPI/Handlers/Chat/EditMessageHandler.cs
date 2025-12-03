@@ -45,7 +45,8 @@ namespace ThesisTestAPI.Handlers.Chat
                 CreatedAt = message.CreatedAt,
                 UpdatedAt = message.UpdatedAt,
                 DeletedAt = message.DeletedAt,
-                HasAttachments = message.HasAttachments,
+                Attachments = null,
+                Sent = true
             };
             await _hub.Clients.Group(ChatHub.GroupName(message.ConversationId)).SendAsync("MessageEdited", payload);
             return (null, payload);

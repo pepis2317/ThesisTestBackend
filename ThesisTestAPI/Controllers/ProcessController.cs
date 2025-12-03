@@ -27,6 +27,16 @@ namespace ThesisTestAPI.Controllers
             };
             return problemDetails;
         }
+        [HttpGet("get-all-processes")]
+        public async Task<IActionResult> GetAllProcesses([FromQuery]GetAllProcessesRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
         [HttpPost("create-process")]
         public async Task<IActionResult> CreateProcess([FromBody] CreateProcessRequest request)
         {

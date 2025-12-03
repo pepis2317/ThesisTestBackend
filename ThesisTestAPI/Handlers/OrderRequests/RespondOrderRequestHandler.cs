@@ -43,6 +43,10 @@ namespace ThesisTestAPI.Handlers.OrderRequests
                 return (ProblemDetailTemplate("Order doesn't exist"), null);
             }
             orderRequest.RequestStatus = request.Status;
+            if(request.Status == RequestStatuses.DECLINED)
+            {
+                orderRequest.DeclineReason = request.DeclineReason;
+            }
             _db.Requests.Update(orderRequest);            
             await _db.SaveChangesAsync();
             var receiver = orderRequest.RequestNavigation.AuthorId;

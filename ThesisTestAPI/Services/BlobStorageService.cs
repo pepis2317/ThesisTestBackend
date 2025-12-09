@@ -4,10 +4,19 @@ using Azure.Storage.Sas;
 using Microsoft.AspNetCore.StaticFiles;
 using System;
 using System.Drawing;
-using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Security.Cryptography;
+using SixLabors.ImageSharp.Formats.Jpeg;
 using ThesisTestAPI.Models.MessageAttachments;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
+using SixLabors.ImageSharp.Processing;
+using Image = SixLabors.ImageSharp.Image;
+using Rectangle = SixLabors.ImageSharp.Rectangle;
+using Size = SixLabors.ImageSharp.Size;
 
 namespace ThesisTestAPI.Services
 {
@@ -31,16 +40,7 @@ namespace ThesisTestAPI.Services
             var blob = container.GetBlobClient(blobName);
 
             lifetime ??= TimeSpan.FromMinutes(10);
-
-            // Get file properties (includes size)
-            try
-            {
-                var properties1 = await blob.GetPropertiesAsync();
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine(e);
-            }
+            
             var properties = await blob.GetPropertiesAsync();
             var sizeBytes = properties.Value.ContentLength;
 
@@ -114,89 +114,85 @@ namespace ThesisTestAPI.Services
             return false;
         }
         public async Task<string> UploadImageFreeAspectAsync(
-                Stream imageStream,
-                string fileName,
-                string contentType,
-                string containerName,
-                int? maxWidth = null,
-                int? maxHeight = null,
-                long jpegQuality = 85L)
+            Stream imageStream,
+            string fileName,
+            string contentType,
+            string containerName,
+            int? maxWidth = null,
+            int? maxHeight = null,
+            int jpegQuality = 85)
         {
             try
             {
-                // ensure we start at 0
-                if (imageStream.CanSeek) imageStream.Position = 0;
+                if (imageStream.CanSeek)
+                    imageStream.Position = 0;
 
-                using var sourceImage = Image.FromStream(imageStream);
+                // Load image using ImageSharp
+                using var image = await Image.LoadAsync(imageStream);
 
-                // Determine target size (preserve aspect)
+                // Determine target size
                 var (targetW, targetH) = ComputeFitSize(
-                    sourceImage.Width,
-                    sourceImage.Height,
+                    image.Width,
+                    image.Height,
                     maxWidth,
                     maxHeight
                 );
 
-                using var outputStream = new MemoryStream();
-
-                // If no resizing needed and we can just pass through, re-encode as requested format anyway
-                // (If you truly want byte-for-byte passthrough, copy the incoming stream instead.)
-                using (var canvas = new Bitmap(targetW, targetH))
-                using (var g = Graphics.FromImage(canvas))
+                // Resize if needed
+                if (targetW != image.Width || targetH != image.Height)
                 {
-                    g.SmoothingMode = SmoothingMode.HighQuality;
-                    g.CompositingQuality = CompositingQuality.HighQuality;
-                    g.PixelOffsetMode = PixelOffsetMode.HighQuality;
-                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-
-                    g.DrawImage(sourceImage, 0, 0, targetW, targetH);
-
-                    // Choose encoder based on contentType (default to JPEG)
-                    if (string.Equals(contentType, "image/png", StringComparison.OrdinalIgnoreCase))
-                    {
-                        canvas.Save(outputStream, ImageFormat.Png);
-                    }
-                    else if (string.Equals(contentType, "image/webp", StringComparison.OrdinalIgnoreCase))
-                    {
-                        // System.Drawing doesn't natively support WebP. Fall back to JPEG.
-                        var jpgEncoder = GetEncoder(ImageFormat.Jpeg);
-                        var encParams = new EncoderParameters(1);
-                        encParams.Param[0] = new EncoderParameter(Encoder.Quality, jpegQuality);
-                        canvas.Save(outputStream, jpgEncoder, encParams);
-                        contentType = "image/jpeg";
-                        // Optionally also adjust fileName extension here.
-                    }
-                    else
-                    {
-                        // JPEG
-                        var jpgEncoder = GetEncoder(ImageFormat.Jpeg);
-                        var encParams = new EncoderParameters(1);
-                        encParams.Param[0] = new EncoderParameter(Encoder.Quality, jpegQuality);
-                        canvas.Save(outputStream, jpgEncoder, encParams);
-                        if (!contentType.Equals("image/jpeg", StringComparison.OrdinalIgnoreCase))
-                            contentType = "image/jpeg";
-                    }
+                    image.Mutate(x =>
+                        x.Resize(new ResizeOptions
+                        {
+                            Size = new Size(targetW, targetH),
+                            Mode = ResizeMode.Max,
+                            Sampler = KnownResamplers.Bicubic
+                        })
+                    );
                 }
 
+                var outputStream = new MemoryStream();
+
+                // Pick encoder based on contentType
+                IImageEncoder encoder = contentType.ToLower() switch
+                {
+                    "image/png" => new PngEncoder(),
+                    "image/webp" => new WebpEncoder { Quality = jpegQuality },
+                    _ => new JpegEncoder { Quality = jpegQuality } // default to jpeg
+                };
+
+                // If format not supported natively → fallback to JPEG
+                if (encoder is WebpEncoder && !Configuration.Default.ImageFormats.Contains(WebpFormat.Instance))
+                {
+                    encoder = new JpegEncoder { Quality = jpegQuality };
+                    contentType = "image/jpeg";
+                }
+
+                // Save as re-encoded image
+                await image.SaveAsync(outputStream, encoder);
                 outputStream.Position = 0;
 
+                // Upload to Azure Blob Storage
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
                 await containerClient.CreateIfNotExistsAsync();
+
                 var blobClient = containerClient.GetBlobClient(fileName);
 
                 var headers = new BlobHttpHeaders { ContentType = contentType };
 
-                // If you want overwrite semantics, use the UploadAsync(stream, overwrite: true) overload,
-                // or pass BlobUploadOptions. Here we also set headers.
-                await blobClient.UploadAsync(outputStream, new BlobUploadOptions { HttpHeaders = headers });
+                await blobClient.UploadAsync(outputStream, new BlobUploadOptions
+                {
+                    HttpHeaders = headers
+                });
 
                 return blobClient.Uri.ToString();
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error uploading image: {ex}");
+                throw new Exception($"Error uploading image: {ex.Message}", ex);
             }
         }
+
 
         // --- helpers ---
 
@@ -221,88 +217,101 @@ namespace ThesisTestAPI.Services
             return (w, h);
         }
 
-        public async Task<string> UploadImageAsync(Stream imageStream, string fileName, string contentType, string containerName, int targetSize)
+        public async Task<string> UploadImageAsync(
+            Stream imageStream,
+            string fileName,
+            string contentType,
+            string containerName,
+            int targetSize)
         {
             try
             {
-                using var compressedStream = CompressImage(imageStream, 40);
-                using var image = Image.FromStream(compressedStream);
+                if (imageStream.CanSeek)
+                    imageStream.Position = 0;
 
-                int width = image.Width;
-                int height = image.Height;
+                // Load original image
+                using var image = await Image.LoadAsync(imageStream);
 
+                // ---- 1. COMPRESS (JPEG QUALITY ≈ 40) ----
+                // Re-encode to JPEG with lower quality into a temp stream
+                var tempCompressed = new MemoryStream();
+                var compressEncoder = new JpegEncoder { Quality = 40 };
+                await image.SaveAsJpegAsync(tempCompressed, compressEncoder);
+                tempCompressed.Position = 0;
+
+                // Reload as ImageSharp image after compression
+                using var compressedImage = await Image.LoadAsync(tempCompressed);
+
+                int width = compressedImage.Width;
+                int height = compressedImage.Height;
+
+                // ---- 2. CROP TO CENTER SQUARE ----
                 int size = Math.Min(width, height);
                 int x = (width - size) / 2;
                 int y = (height - size) / 2;
 
-                using var croppedImage = new Bitmap(size, size);
-                using (var graphics = Graphics.FromImage(croppedImage))
+                compressedImage.Mutate(m => m.Crop(new Rectangle(x, y, size, size)));
+
+                // ---- 3. RESIZE TO TARGET SIZE ----
+                compressedImage.Mutate(m =>
+                    m.Resize(new ResizeOptions
+                    {
+                        Size = new Size(targetSize, targetSize),
+                        Mode = ResizeMode.Stretch, // it's already square
+                        Sampler = KnownResamplers.Bicubic
+                    })
+                );
+
+                // ---- 4. ENCODE AS JPEG ----
+                var outputStream = new MemoryStream();
+                await compressedImage.SaveAsJpegAsync(outputStream, new JpegEncoder
                 {
-                    graphics.DrawImage(image, new Rectangle(0, 0, size, size), new Rectangle(x, y, size, size), GraphicsUnit.Pixel);
-                }
+                    Quality = 85 // or change as needed
+                });
 
-                // Resize to target size
-                using var resizedImage = new Bitmap(targetSize, targetSize);
-                using (var graphics = Graphics.FromImage(resizedImage))
-                {
-                    graphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                    graphics.DrawImage(croppedImage, 0, 0, targetSize, targetSize);
-                }
+                outputStream.Position = 0;
 
-                using var memoryStream = new MemoryStream();
-                resizedImage.Save(memoryStream, ImageFormat.Jpeg);
-                memoryStream.Position = 0;
-
+                // ---- 5. UPLOAD TO AZURE BLOB STORAGE ----
                 var containerClient = _blobServiceClient.GetBlobContainerClient(containerName);
                 await containerClient.CreateIfNotExistsAsync();
+
                 var blobClient = containerClient.GetBlobClient(fileName);
-                var blobHttpHeaders = new BlobHttpHeaders
+
+                var headers = new BlobHttpHeaders
                 {
                     ContentType = contentType
                 };
-                await blobClient.UploadAsync(memoryStream, blobHttpHeaders);
+
+                await blobClient.UploadAsync(outputStream, new BlobUploadOptions
+                {
+                    HttpHeaders = headers
+                });
+
                 return blobClient.Uri.ToString();
             }
             catch (Exception ex)
             {
-                throw new Exception($"Error uploading image: {ex}");
+                throw new Exception($"Error uploading image: {ex.Message}", ex);
             }
         }
-        private Stream CompressImage(Stream imageStream, int quality)
+
+        private async Task<Stream> CompressImage(Stream imageStream, int quality)
         {
+            imageStream.Position = 0;
+
+            using var image = await SixLabors.ImageSharp.Image.LoadAsync(imageStream);
+
             var outputStream = new MemoryStream();
 
-            // Load the image from the input stream
-            using (var bmp = new Bitmap(imageStream))
+            var encoder = new JpegEncoder
             {
-                // Get the JPEG encoder
-                ImageCodecInfo jpgEncoder = GetEncoder(ImageFormat.Jpeg);
+                Quality = quality // same as Encoder.Quality
+            };
 
-                // Set the quality parameter
-                var encoder = Encoder.Quality;
-                var encoderParameters = new EncoderParameters(1);
-                encoderParameters.Param[0] = new EncoderParameter(encoder, quality);
+            await image.SaveAsJpegAsync(outputStream, encoder);
 
-                // Save the compressed image to the output stream
-                bmp.Save(outputStream, jpgEncoder, encoderParameters);
-            }
-
-            // Reset the stream position to the beginning
             outputStream.Position = 0;
-
             return outputStream;
-        }
-        private ImageCodecInfo GetEncoder(ImageFormat format)
-        {
-            ImageCodecInfo[] codecs = ImageCodecInfo.GetImageDecoders();
-            foreach (var codec in codecs)
-            {
-                if (codec.FormatID == format.Guid)
-                {
-                    return codec;
-                }
-            }
-            return null;
         }
         public async Task<string> UploadFileAsync(
             Stream fileStream,

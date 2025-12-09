@@ -66,6 +66,17 @@ namespace ThesisTestAPI.Controllers
             }
             return Ok(result.Item2);
         }
+
+        [HttpDelete("delete-post")]
+        public async Task<IActionResult> DeletePost(DeletePostRequest request)
+        {
+            var result = await _mediator.Send(request);
+            if (result.Item1 != null)
+            {
+                return BadRequest(result.Item1);
+            }
+            return Ok(result.Item2);
+        }
         [HttpGet("get-cursor-posts")]
         public async Task<IActionResult> GetCursorPosts([FromQuery]GetCursorPostRequest request)
         {

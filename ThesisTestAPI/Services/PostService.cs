@@ -54,6 +54,8 @@ namespace ThesisTestAPI.Services
             {
                 await _blobStorageService.DeleteFileAsync(image.ImageName, Enum.BlobContainers.IMAGES);
             }
+
+            await _db.Posts.Where((q => q.PostId == request.PostId)).ExecuteDeleteAsync();
             await _db.Contents.Where(c => c.ContentId == request.PostId).ExecuteDeleteAsync();
             return "Successfully deleted post";
         }

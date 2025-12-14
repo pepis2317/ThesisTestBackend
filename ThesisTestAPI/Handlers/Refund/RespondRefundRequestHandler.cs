@@ -13,11 +13,9 @@ namespace ThesisTestAPI.Handlers.Refund
     {
         private readonly ThesisDbContext _db;
         private readonly IHttpContextAccessor _httpContextAccessor;
-        private readonly MidtransService _midtransService;
-        public RespondRefundRequestHandler(ThesisDbContext db, MidtransService midtransService, IHttpContextAccessor httpContextAccessor)
+        public RespondRefundRequestHandler(ThesisDbContext db, IHttpContextAccessor httpContextAccessor)
         {
             _db = db;
-            _midtransService = midtransService;
             _httpContextAccessor = httpContextAccessor;
         }
         private ProblemDetails ProblemDetailTemplate(string detail)
@@ -49,7 +47,7 @@ namespace ThesisTestAPI.Handlers.Refund
                 return (null, new RefundResponse { RefundId = refundRequest.RefundRequestId});
             }
             //get amount by querying the total price of the process
-            var midtransStatuses= new List<MidtransStatus>();
+            long amountReturnedBySnap = 0;
             long amountReturnedByWallet = 0;
             var steps = await _db.Steps.Include(q => q.Transaction).Where(q => q.ProcessId == refundRequest.ProcessId && (q.Status == StepStatuses.COMPLETED ||q.Status == StepStatuses.WORKING)).ToListAsync();
             foreach(var step in steps)
@@ -58,11 +56,7 @@ namespace ThesisTestAPI.Handlers.Refund
                 {
                     if(step.Transaction.ExternalRef != null)
                     {
-                        var status = await _midtransService.GetStatusAsync(step.Transaction.ExternalRef);
-                        if (status != null && status.status_code != "404")
-                        {
-                            midtransStatuses.Add(status);
-                        }
+                        amountReturnedBySnap += step.Transaction.AmountMinor;
                     }
                     else
                     {
@@ -96,26 +90,25 @@ namespace ThesisTestAPI.Handlers.Refund
                 buyerWallet.BalanceMinor += amountReturnedByWallet;
                 _db.WalletTransactions.Add(walletTransaction);
             }
-            foreach (var status in midtransStatuses)
+
+            if (amountReturnedBySnap > 0)
             {
-                var grossAmount = (long)Convert.ToDouble(status.gross_amount);
-                await _midtransService.CreateMidtransRefundAsync(status.transaction_id, grossAmount, refundRequest.Message);
-                var snapTransaction = new WalletTransaction
+                var snapTransaction = new WalletTransaction()
                 {
                     TransactionId = Guid.NewGuid(),
                     WalletId = buyerWallet.WalletId,
-                    AmountMinor = grossAmount,
-                    Direction = "C",
-                    SignedAmount = grossAmount,
-                    Type = "Refund",
-                    Status = TransactionStatuses.PENDING,
+                    AmountMinor = amountReturnedBySnap,
                     CreatedAt = DateTimeOffset.Now,
                     IdempotencyKey = Guid.NewGuid().ToString(),
-                    ExternalRef = status.order_id,
-                    ReferenceType = "MidtransRefund",
-                    Memo = "Refund via Midtrans",
-                    //ReferenceId = refundRequest.RefundRequestId
+                    Type = "Refund",
+                    Status = TransactionStatuses.POSTED,
+                    PostedAt = DateTime.Now,
+                    Direction = "C",
+                    SignedAmount = amountReturnedBySnap,
+                    ReferenceType = "Wallet",
+                    Memo = "Process refund via Snap"
                 };
+                buyerWallet.BalanceMinor += amountReturnedBySnap;
                 _db.WalletTransactions.Add(snapTransaction);
             }
             var finalStep = steps.Where(q => q.ProcessId == refundRequest.ProcessId).OrderByDescending(q => q.CreatedAt).FirstOrDefault();

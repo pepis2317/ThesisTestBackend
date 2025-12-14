@@ -1,4 +1,5 @@
-﻿using MediatR;
+﻿using System.Transactions;
+using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ThesisTestAPI.Entities;
@@ -40,6 +41,20 @@ namespace ThesisTestAPI.Handlers.Transaction
             {
                 return (ProblemDetailTemplate("Wallet doesn't exist"), null);
             }
+
+            var existingTransaction = await _db.WalletTransactions
+                .Where(q => q.IdempotencyKey == request.IdempotencyKey.ToString()).FirstOrDefaultAsync();
+            if (existingTransaction != null)
+            {
+                if (existingTransaction.Status == TransactionStatuses.POSTED)
+                {
+                    return (null, new TransactionResponse
+                    {
+                        orderId = existingTransaction.ExternalRef,
+                        paymentStatus = TransactionStatuses.POSTED,
+                    });
+                }
+            }
             var orderId = $"deposit-{Guid.NewGuid()}";
             var transaction = new WalletTransaction
             {
@@ -51,7 +66,7 @@ namespace ThesisTestAPI.Handlers.Transaction
                 Type = "Deposit",
                 Status = TransactionStatuses.PENDING,
                 CreatedAt = DateTimeOffset.Now,
-                IdempotencyKey = Guid.NewGuid().ToString(),
+                IdempotencyKey = request.IdempotencyKey.ToString(),
                 ExternalRef = orderId,
                 ReferenceType = "MidtransSnap",
                 Memo = "Deposit via Midtrans Snap"
@@ -67,7 +82,8 @@ namespace ThesisTestAPI.Handlers.Transaction
             {
                 orderId = orderId,
                 token = snap.token,
-                redirectUrl = snap.redirect_url
+                redirectUrl = snap.redirect_url,
+                paymentStatus = TransactionStatuses.PENDING,
             });
         }
     }

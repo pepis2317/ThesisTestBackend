@@ -24,6 +24,7 @@ namespace ThesisTestAPI.Handlers.Steps
                 TransactionId = q.TransactionId == null ? null : q.TransactionId.ToString(),
                 MinCompleteEstimate = q.MinCompleteEstimate.ToString("dd/MM/yyyy"),
                 MaxCompleteEstimate = q.MaxCompleteEstimate.ToString("dd/MM/yyyy"),
+                Price = q.Amount,
                 Status = q.Status
             }).FirstOrDefaultAsync();
             return (null, step);

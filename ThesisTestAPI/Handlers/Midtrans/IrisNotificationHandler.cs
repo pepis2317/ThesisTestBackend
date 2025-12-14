@@ -56,7 +56,7 @@ namespace ThesisTestAPI.Handlers.Midtrans
                 var wallet = await _db.Wallets.Where(q=>q.WalletId == transaction.WalletId).FirstOrDefaultAsync();
                 if(wallet != null)
                 {
-                    wallet.BalanceMinor -= (long)Convert.ToDouble(request.amount);
+                    wallet.BalanceMinor -= transaction.AmountMinor;
                 }
             }
             await _db.SaveChangesAsync();

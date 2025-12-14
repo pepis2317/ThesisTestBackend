@@ -35,13 +35,15 @@ namespace ThesisTestAPI.Handlers.Transaction
         }
         public async Task<(ProblemDetails?, TransactionResponse?)> Handle(ApproveAndPayStepRequest request, CancellationToken cancellationToken)
         {
-            var step = await _db.Steps.Include(q=>q.Process).Where(q => q.StepId == request.StepId).FirstOrDefaultAsync();
+            var step = await _db.Steps.Include(q=>q.Process)
+                .Include(q=>q.Transaction)
+                .Where(q => q.StepId == request.StepId).FirstOrDefaultAsync();
             if(step == null)
             {
                 return (ProblemDetailTemplate("Step doesn't exist"), null);
             }
             var buyerId = await _db.Contents.Where(q => q.ContentId == step.Process.RequestId).Select(q => q.AuthorId).FirstOrDefaultAsync();
-            var buyerWallet = await _db.Wallets.Where(q => q.UserId == buyerId).FirstOrDefaultAsync();
+            var buyerWallet = await _db.Wallets.Include(q=>q.User).Where(q => q.UserId == buyerId).FirstOrDefaultAsync();
             if (buyerWallet == null)
             {
                 return (ProblemDetailTemplate("Buyer wallet doesn't exist"), null);
@@ -82,8 +84,20 @@ namespace ThesisTestAPI.Handlers.Transaction
                 await _notificationService.SendNotification("Step has been accepted", sellerId);
                 return (null, new TransactionResponse
                 {
-                    orderId = walletTransaction.TransactionId.ToString()
+                    orderId = walletTransaction.TransactionId.ToString(),
+                    paymentStatus = TransactionStatuses.POSTED
                 });
+            }
+            if (step.Transaction != null)
+            {
+                if (step.Transaction.Status == TransactionStatuses.POSTED)
+                {
+                    return (null, new TransactionResponse
+                    {
+                        orderId = step.Transaction.ExternalRef,
+                        paymentStatus = TransactionStatuses.POSTED
+                    });
+                }
             }
             var orderId = $"fee-{Guid.NewGuid()}";
             var transaction = new WalletTransaction
@@ -106,7 +120,7 @@ namespace ThesisTestAPI.Handlers.Transaction
             _db.WalletTransactions.Add(transaction);
             await _db.SaveChangesAsync();
             await _notificationService.SendNotification("Step has been accepted", sellerId);
-            var snap = await _midtransService.CreateSnapTransactionAsync(orderId, step.Amount);
+            var snap = await _midtransService.CreateSnapTransactionAsync(orderId, step.Amount, email:buyerWallet.User.Email, firstName:buyerWallet.User.UserName);
             if (snap == null)
             {
                 return (ProblemDetailTemplate("Something went wrong when creating midtrans transaction"), null);
@@ -115,7 +129,8 @@ namespace ThesisTestAPI.Handlers.Transaction
             {
                 orderId = orderId,
                 token = snap.token,
-                redirectUrl = snap.redirect_url
+                redirectUrl = snap.redirect_url,
+                paymentStatus = TransactionStatuses.PENDING
             });
         }
     }

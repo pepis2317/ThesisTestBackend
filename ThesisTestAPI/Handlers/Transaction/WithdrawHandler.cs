@@ -65,7 +65,8 @@ namespace ThesisTestAPI.Handlers.Transaction
             //}
             return (null, new TransactionResponse
             {
-                orderId = referenceNo
+                orderId = referenceNo,
+                paymentStatus = TransactionStatuses.PENDING,
             });
         }
     }

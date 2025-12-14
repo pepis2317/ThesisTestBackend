@@ -40,13 +40,13 @@ namespace ThesisTestAPI.Handlers.Shipment
         }
         public async Task<(ProblemDetails?, ShipmentResponse?)> Handle(PayShipmentRequest request, CancellationToken cancellationToken)
         {
-            var shipment = await _db.Shipments.Include(q=>q.Process).ThenInclude(q=>q.Request).ThenInclude(q=>q.Seller).Where(q => q.ShipmentId == request.ShipmentId).FirstOrDefaultAsync();
+            var shipment = await _db.Shipments.Include(q=>q.Transaction).Include(q=>q.Process).ThenInclude(q=>q.Request).ThenInclude(q=>q.Seller).Where(q => q.ShipmentId == request.ShipmentId).FirstOrDefaultAsync();
             if (shipment == null)
             {
                 return (ProblemDetailTemplate("Shipping data doesn't exist"), null);
             }
             var buyerId = await _db.Contents.Where(q => q.ContentId == shipment.Process.Request.RequestId).Select(q => q.AuthorId).FirstOrDefaultAsync();
-            var buyerWallet = await _db.Wallets.Where(q => q.UserId == buyerId).FirstOrDefaultAsync();
+            var buyerWallet = await _db.Wallets.Include(q=>q.User).Where(q => q.UserId == buyerId).FirstOrDefaultAsync();
             if (buyerWallet == null)
             {
                 return (ProblemDetailTemplate("Buyer wallet doesn't exist"), null);
@@ -79,17 +79,24 @@ namespace ThesisTestAPI.Handlers.Shipment
                 shipment.CourierType = request.CourierType;
                 shipment.CourierCompany = request.CourierCompany;
                 _db.WalletTransactions.Add(walletTransaction);
-                //var orderResponse = await _biteshipService.CreateOrder(request.ShipmentId, request.OriginNote, request.DestinationNote, request.DeliveryType,request.CourierCompany, request.CourierType, request.OrderNote);
-                //if(orderResponse == null)
-                //{
-                //    return (ProblemDetailTemplate("Problem in creating biteship order"), null);
-                //}
-                //shipment.OrderId = orderResponse.Id;
                 await _db.SaveChangesAsync();
                 return (null, new ShipmentResponse
                 {
-                    ShipmentId = shipment.ShipmentId
+                    ShipmentId = shipment.ShipmentId,
+                    Status = TransactionStatuses.POSTED
                 });
+            }
+
+            if (shipment.Transaction != null)
+            {
+                if (shipment.Transaction.Status == TransactionStatuses.POSTED)
+                {
+                    return (null, new ShipmentResponse
+                    {
+                        ShipmentId = shipment.ShipmentId,
+                        Status = TransactionStatuses.POSTED
+                    });
+                } 
             }
             var orderId = $"fee-{Guid.NewGuid()}";
             var transaction = new WalletTransaction
@@ -116,7 +123,7 @@ namespace ThesisTestAPI.Handlers.Shipment
             shipment.CourierCompany = request.CourierCompany;
             _db.WalletTransactions.Add(transaction);
             await _db.SaveChangesAsync();
-            var snap = await _midtransService.CreateSnapTransactionAsync(orderId, request.Amount);
+            var snap = await _midtransService.CreateSnapTransactionAsync(orderId, request.Amount, email:buyerWallet.User.Email,firstName:buyerWallet.User.UserName);
             if (snap == null)
             {
                 return (ProblemDetailTemplate("Something went wrong when creating midtrans transaction"), null);
@@ -126,7 +133,8 @@ namespace ThesisTestAPI.Handlers.Shipment
             {
                 ShipmentId = shipment.ShipmentId,
                 token = snap.token,
-                redirectUrl = snap.redirect_url
+                redirectUrl = snap.redirect_url,
+                paymentStatus = TransactionStatuses.PENDING
             });
         }
     }

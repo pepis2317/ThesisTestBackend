@@ -52,7 +52,7 @@ namespace ThesisTestAPI.Handlers.Midtrans
                 var wallet = await _db.Wallets.FindAsync(transaction.WalletId);
                 if (wallet != null)
                 {
-                    wallet.BalanceMinor += (long)Convert.ToDouble(request.gross_amount);
+                    wallet.BalanceMinor += transaction.AmountMinor;
                 }
             }
             else
@@ -86,7 +86,7 @@ namespace ThesisTestAPI.Handlers.Midtrans
                         var wallet = await _db.Wallets.Where(q => q.WalletId == transaction.WalletId).FirstOrDefaultAsync();
                         if (wallet != null)
                         {
-                            wallet.BalanceMinor += (long)Convert.ToDouble(request.gross_amount);
+                            wallet.BalanceMinor += transaction.AmountMinor;
                         }
                     }
                     else if (transaction.Memo == TransactionMemos.SNAPPAYMENT)

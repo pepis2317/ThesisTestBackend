@@ -83,7 +83,7 @@ namespace ThesisTestAPI.Handlers.Shipment
                 return (null, new ShipmentResponse
                 {
                     ShipmentId = shipment.ShipmentId,
-                    Status = TransactionStatuses.POSTED
+                    paymentStatus = TransactionStatuses.POSTED
                 });
             }
 
@@ -94,7 +94,7 @@ namespace ThesisTestAPI.Handlers.Shipment
                     return (null, new ShipmentResponse
                     {
                         ShipmentId = shipment.ShipmentId,
-                        Status = TransactionStatuses.POSTED
+                        paymentStatus = TransactionStatuses.POSTED
                     });
                 } 
             }

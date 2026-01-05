@@ -42,19 +42,18 @@ namespace ThesisTestAPI.Handlers.Transaction
                 return (ProblemDetailTemplate("Wallet doesn't exist"), null);
             }
 
-            var existingTransaction = await _db.WalletTransactions
-                .Where(q => q.IdempotencyKey == request.IdempotencyKey.ToString()).FirstOrDefaultAsync();
+            var existingTransaction = await _db.WalletTransactions.FirstOrDefaultAsync(q =>
+                q.WalletId == wallet.WalletId &&
+                q.IdempotencyKey == request.IdempotencyKey.ToString(), cancellationToken);
             if (existingTransaction != null)
             {
-                if (existingTransaction.Status == TransactionStatuses.POSTED)
+                return (null, new TransactionResponse
                 {
-                    return (null, new TransactionResponse
-                    {
-                        orderId = existingTransaction.ExternalRef,
-                        paymentStatus = TransactionStatuses.POSTED,
-                    });
-                }
+                    orderId = existingTransaction.ExternalRef,
+                    paymentStatus = existingTransaction.Status,
+                });
             }
+
             var orderId = $"deposit-{Guid.NewGuid()}";
             var transaction = new WalletTransaction
             {

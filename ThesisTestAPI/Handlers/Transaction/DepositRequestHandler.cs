@@ -49,18 +49,36 @@ namespace ThesisTestAPI.Handlers.Transaction
             {
                 if (existingTransaction.Status == TransactionStatuses.PENDING)
                 {
-                    var existingSnap = await _midtransService.CreateSnapTransactionAsync(existingTransaction.ExternalRef, request.Amount, wallet.User.Email, wallet.User.UserName);
-                    if(existingSnap == null)
+                    _db.WalletTransactions.Remove(existingTransaction);
+                    var newOrderId = $"deposit-{Guid.NewGuid()}";
+                    var newTransaction = new WalletTransaction
+                    {
+                        TransactionId = Guid.NewGuid(),
+                        WalletId = wallet.WalletId,
+                        AmountMinor = request.Amount,
+                        Direction = "C",
+                        SignedAmount = request.Amount,
+                        Type = "Deposit",
+                        Status = TransactionStatuses.PENDING,
+                        CreatedAt = DateTimeOffset.Now,
+                        IdempotencyKey = request.IdempotencyKey.ToString(),
+                        ExternalRef = newOrderId,
+                        ReferenceType = "MidtransSnap",
+                        Memo = "Deposit via Midtrans Snap"
+                    };
+                    _db.WalletTransactions.Add(newTransaction);
+                    await _db.SaveChangesAsync();
+                    var newSnap = await _midtransService.CreateSnapTransactionAsync(newOrderId, request.Amount, wallet.User.Email, wallet.User.UserName);
+                    if(newSnap == null)
                     {
                         return (ProblemDetailTemplate("Something wrong with creating the midtrans transaction"), null);
                     }
-                    
                     return (null, new TransactionResponse
                     {
-                        orderId = existingTransaction.ExternalRef,
-                        paymentStatus = existingTransaction.Status,
-                        token = existingSnap.token,
-                        redirectUrl = existingSnap.redirect_url,
+                        orderId = newOrderId,
+                        token = newSnap.token,
+                        redirectUrl = newSnap.redirect_url,
+                        paymentStatus = TransactionStatuses.PENDING,
                     });
                 }
                 return (null, new TransactionResponse

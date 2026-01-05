@@ -47,6 +47,22 @@ namespace ThesisTestAPI.Handlers.Transaction
                 q.IdempotencyKey == request.IdempotencyKey.ToString(), cancellationToken);
             if (existingTransaction != null)
             {
+                if (existingTransaction.Status == TransactionStatuses.PENDING)
+                {
+                    var existingSnap = await _midtransService.CreateSnapTransactionAsync(existingTransaction.ExternalRef, request.Amount, wallet.User.Email, wallet.User.UserName);
+                    if(existingSnap == null)
+                    {
+                        return (ProblemDetailTemplate("Something wrong with creating the midtrans transaction"), null);
+                    }
+                    
+                    return (null, new TransactionResponse
+                    {
+                        orderId = existingTransaction.ExternalRef,
+                        paymentStatus = existingTransaction.Status,
+                        token = existingSnap.token,
+                        redirectUrl = existingSnap.redirect_url,
+                    });
+                }
                 return (null, new TransactionResponse
                 {
                     orderId = existingTransaction.ExternalRef,

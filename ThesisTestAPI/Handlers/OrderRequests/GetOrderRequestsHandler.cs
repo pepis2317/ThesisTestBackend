@@ -7,56 +7,83 @@ using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.OrderRequests
 {
-    public class GetOrderRequestsHandler : IRequestHandler<GetOrderRequests, (ProblemDetails?, PaginatedOrderRequestsResponse?)>
+    public class
+        GetOrderRequestsHandler : IRequestHandler<GetOrderRequests, (ProblemDetails?, PaginatedOrderRequestsResponse?)>
     {
         private readonly ThesisDbContext _db;
         private readonly BlobStorageService _blobStorageService;
+
         public GetOrderRequestsHandler(ThesisDbContext db, BlobStorageService blobStorageService)
         {
             _db = db;
             _blobStorageService = blobStorageService;
         }
-        public async Task<(ProblemDetails?, PaginatedOrderRequestsResponse?)> Handle(GetOrderRequests request, CancellationToken cancellationToken)
+
+        public async Task<(ProblemDetails?, PaginatedOrderRequestsResponse?)> Handle(GetOrderRequests request,
+            CancellationToken cancellationToken)
         {
-            var orderRequests = await _db.Contents
-                .Include(c => c.Request).ThenInclude(r => r.Seller)
-                .Include(c => c.Author)
+            var query = _db.Contents
+                .Where(c =>
+                    c.Request != null &&
+                    (request.IsSeller
+                        ? c.Request.Seller.OwnerId == request.UserId
+                        : c.AuthorId == request.UserId))
+                .OrderByDescending(c => c.CreatedAt);
+
+            var total = await query.CountAsync();
+
+            var data = await query
                 .Skip((request.pageNumber - 1) * request.pageSize)
-                .Where(c => (request.IsSeller == true? c.Request.Seller.OwnerId == request.UserId : c.AuthorId == request.UserId )&& c.Request != null)
-                .OrderByDescending(c => c.CreatedAt)
-                .Select(c => new{ Request = c.Request, Author = c.Author, CreatedAt = c.CreatedAt}).ToListAsync();
-            var result = new List<OrderRequestResponse>();
-            foreach (var orderRequest in orderRequests)
+                .Take(request.pageSize)
+                .Select(c => new
+                {
+                    c.CreatedAt,
+                    RequestId = c.Request.RequestId,
+                    Title = c.Request.RequestTitle,
+                    Status = c.Request.RequestStatus,
+                    SellerId = c.Request.SellerId,
+                    SellerName = c.Request.Seller.SellerName,
+                    SellerPicture = c.Request.Seller.SellerPicture,
+                    DeclineReason = c.Request.DeclineReason,
+                    BuyerUserId = c.Author.UserId,
+                    BuyerName = c.Author.UserName,
+                    BuyerPicture = c.Author.Pfp
+                })
+                .ToListAsync();
+
+            var tasks = data.Select(async item =>
             {
-                var order = new OrderRequestResponse
+                var sellerPicTask = string.IsNullOrEmpty(item.SellerPicture)
+                    ? Task.FromResult("")
+                    : _blobStorageService.GetTemporaryImageUrl(item.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
+
+                var buyerPicTask = string.IsNullOrEmpty(item.BuyerPicture)
+                    ? Task.FromResult("")
+                    : _blobStorageService.GetTemporaryImageUrl(item.BuyerPicture, Enum.BlobContainers.PFP);
+
+                await Task.WhenAll(sellerPicTask, buyerPicTask);
+
+                return new OrderRequestResponse
                 {
-                    RequestId = orderRequest.Request.RequestId,
-                    Title = orderRequest.Request.RequestTitle,
-                    Status = orderRequest.Request.RequestStatus,
-                    SellerName = orderRequest.Request.Seller.SellerName,
-                    BuyerName = orderRequest.Author.UserName,
-                    BuyerUserId = orderRequest.Author.UserId,
-                    SellerId = orderRequest.Request.SellerId
+                    RequestId = item.RequestId,
+                    Title = item.Title,
+                    Status = item.Status,
+                    SellerName = item.SellerName,
+                    BuyerName = item.BuyerName,
+                    BuyerUserId = item.BuyerUserId,
+                    SellerId = item.SellerId,
+                    SellerPictureUrl = sellerPicTask.Result,
+                    BuyerPictureUrl = buyerPicTask.Result,
+                    DeclineReason = item.DeclineReason
                 };
-                if (!string.IsNullOrEmpty(orderRequest.Request.Seller.SellerPicture))
-                {
-                    order.SellerPictureUrl = await _blobStorageService.GetTemporaryImageUrl(orderRequest.Request.Seller.SellerPicture, Enum.BlobContainers.SELLERPICTURE);
-                }
-                if (!string.IsNullOrEmpty(orderRequest.Author.Pfp))
-                {
-                    order.BuyerPictureUrl = await _blobStorageService.GetTemporaryImageUrl(orderRequest.Author.Pfp, Enum.BlobContainers.PFP);
-                }
-                if (!string.IsNullOrEmpty(orderRequest.Request.DeclineReason))
-                {
-                    order.DeclineReason = orderRequest.Request.DeclineReason;
-                }
-                result.Add(order);
-            }
-            var total = await _db.Contents.Include(c => c.Request).ThenInclude(r => r.Seller).Where(c => c.AuthorId == request.UserId && c.Request != null).CountAsync();
+            });
+
+            var result = await Task.WhenAll(tasks);
+
             return (null, new PaginatedOrderRequestsResponse
             {
                 Total = total,
-                Requests = result,
+                Requests = result.ToList()
             });
         }
     }

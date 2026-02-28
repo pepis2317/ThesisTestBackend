@@ -17,39 +17,59 @@ namespace ThesisTestAPI.Handlers.Steps
 
         public async Task<(ProblemDetails?, PaginatedStepsResponse?)> Handle(GetStepsRequest request, CancellationToken cancellationToken)
         {
-            var steps = await _db.Steps
+            var query = _db.Steps
+                .Where(s => s.ProcessId == request.ProcessId)
+                .OrderBy(s => s.CreatedAt);
+
+            var total = await query.CountAsync();
+
+            var steps = await query
                 .Skip((request.pageNumber - 1) * request.pageSize)
-                .Where(q => q.ProcessId == request.ProcessId)
-                .OrderBy(q => q.CreatedAt)
-                .Select(q => new StepResponse
+                .Take(request.pageSize)
+                .Select(s => new
                 {
-                    StepId = q.StepId,
-                    Title = q.Title,
-                    Description = q.Description,
-                    TransactionId = q.TransactionId == null ? null : q.TransactionId.ToString(),
-                    MinCompleteEstimate = q.MinCompleteEstimate.ToString("dd/MM/yyyy"),
-                    MaxCompleteEstimate = q.MaxCompleteEstimate.ToString("dd/MM/yyyy"),
-                    Status = q.Status,
-                    Price = q.Amount,
-                    Materials = q.Materials.Select(m => new MaterialModel
-                    {
-                        MaterialId = m.MaterialId,
-                        Cost = m.Cost,
-                        Name =  m.Name,
-                        Quantity =  m.Quantity,
-                        Supplier = m.Supplier,
-                        UnitOfMeasurement =  m.UnitOfMeasurement,
-                        CreatedAt = m.CreatedAt,
-                        UpdatedAt = m.UpdatedAt
-                    }).OrderBy(m => m.CreatedAt).ToList()
-                }).ToListAsync();
-            
-            var total = await _db.Steps.Where(q => q.ProcessId == request.ProcessId).CountAsync();
-            
+                    s.StepId,
+                    s.Title,
+                    s.Description,
+                    s.TransactionId,
+                    s.MinCompleteEstimate,
+                    s.MaxCompleteEstimate,
+                    s.Status,
+                    s.Amount,
+                    Materials = s.Materials
+                        .OrderBy(m => m.CreatedAt)
+                        .Select(m => new MaterialModel
+                        {
+                            MaterialId = m.MaterialId,
+                            Cost = m.Cost,
+                            Name = m.Name,
+                            Quantity = m.Quantity,
+                            Supplier = m.Supplier,
+                            UnitOfMeasurement = m.UnitOfMeasurement,
+                            CreatedAt = m.CreatedAt,
+                            UpdatedAt = m.UpdatedAt
+                        })
+                        .ToList()
+                })
+                .ToListAsync();
+
+            var result = steps.Select(s => new StepResponse
+            {
+                StepId = s.StepId,
+                Title = s.Title,
+                Description = s.Description,
+                TransactionId = s.TransactionId?.ToString(),
+                MinCompleteEstimate = s.MinCompleteEstimate.ToString("dd/MM/yyyy"),
+                MaxCompleteEstimate = s.MaxCompleteEstimate.ToString("dd/MM/yyyy"),
+                Status = s.Status,
+                Price = s.Amount,
+                Materials = s.Materials
+            }).ToList();
+
             return (null, new PaginatedStepsResponse
             {
                 Total = total,
-                Steps = steps
+                Steps = result
             });
         }
     }

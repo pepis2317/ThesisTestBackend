@@ -20,8 +20,7 @@ namespace ThesisTestAPI.Handlers.Shipment
                 .Select(q => q.ProcessId)
                 .ToListAsync();
 
-            var query = _db.Shipments
-                .Where(q => processIds.Contains(q.ProcessId));
+            var query = _db.Shipments .Where(q => processIds.Contains(q.ProcessId));
 
             var total = await query.CountAsync();
 

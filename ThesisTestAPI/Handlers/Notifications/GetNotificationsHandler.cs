@@ -20,22 +20,18 @@ namespace ThesisTestAPI.Handlers.Notifications
             var query = _db.Notifications
                 .Where(q => q.UserId == request.UserId)
                 .OrderByDescending(q => q.CreatedAt);
-            // Apply pagination AFTER filtering and ordering
             var notifications = await query
                 .Skip((request.pageNumber - 1) * request.pageSize)
                 .Take(request.pageSize)
                 .ToListAsync();
 
-            // Update SeenAt for all notifications in this page
             var now = DateTimeOffset.UtcNow;
             foreach (var n in notifications)
             {
                 n.SeenAt = now;
             }
-            // Save updates
             await _db.SaveChangesAsync();
 
-            // Map to response
             var result = notifications.Select(q => new NotificationResponse
             {
                 NotificationId = q.NotificationId,

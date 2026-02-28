@@ -10,5 +10,6 @@
         public string MaxCompleteEstimate {  get; set; } = string.Empty;
         public string? Status {  get; set; } = string.Empty;
         public long Price { get; set; }
+        public List<MaterialModel> Materials { get; set; } = new();
     }
 }

@@ -103,10 +103,6 @@ builder.Services.AddCors(options =>
               .AllowAnyMethod();
     });
 });
-builder.WebHost.ConfigureKestrel(options =>
-{
-    options.ListenAnyIP(5026); // Allows connections from any IP
-});
 builder.Services.AddSignalR().AddAzureSignalR(builder.Configuration["Azure:SignalR:ConnectionString"]);
 builder.Services.AddHttpClient("midtrans", (sp, http) =>
 {
@@ -128,8 +124,8 @@ builder.Services.AddHttpClient("midtrans-iris", (sp, http) =>
     http.DefaultRequestHeaders.Accept.Add(
         new MediaTypeWithQualityHeaderValue("application/json"));
 
-    // You’ll add "X-Idempotency-Key" per request when creating payouts,
-    // because it must be unique per payout. Don’t set it globally here.
+    // Youï¿½ll add "X-Idempotency-Key" per request when creating payouts,
+    // because it must be unique per payout. Donï¿½t set it globally here.
 });
 builder.Services.Configure<MidtransOptions>(configuration.GetSection("Midtrans"));
 builder.Services.Configure<IrisOptions>(configuration.GetSection("Iris"));

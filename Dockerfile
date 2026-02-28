@@ -1,4 +1,5 @@
 ﻿FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+USER $APP_UID
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
@@ -19,9 +20,6 @@ RUN dotnet publish "./ThesisTestAPI.csproj" -c $BUILD_CONFIGURATION -o /app/publ
 
 FROM base AS final
 WORKDIR /app
-
-# Force ASP.NET to listen on port 8080
 ENV ASPNETCORE_URLS=http://+:8080
-
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "ThesisTestAPI.dll"]

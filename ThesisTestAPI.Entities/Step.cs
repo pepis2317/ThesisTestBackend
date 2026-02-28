@@ -33,6 +33,8 @@ public partial class Step
 
     public virtual ICollection<Step> InverseNextStep { get; set; } = new List<Step>();
 
+    public virtual ICollection<Material> Materials { get; set; } = new List<Material>();
+
     public virtual Step? NextStep { get; set; }
 
     public virtual Process Process { get; set; } = null!;

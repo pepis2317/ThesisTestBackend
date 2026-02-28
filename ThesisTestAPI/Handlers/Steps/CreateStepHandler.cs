@@ -49,11 +49,29 @@ namespace ThesisTestAPI.Handlers.Steps
                 }
             }
             _db.Steps.Add(step);
-            var process = await _db.Processes.Include(q=>q.Request).ThenInclude(q=>q.RequestNavigation).Where(q=>q.ProcessId == request.ProcessId).FirstOrDefaultAsync();
+            var process = await _db.Processes.Include(q=>q.Request).ThenInclude(q=>q.RequestNavigation).
+                Where(q=>q.ProcessId == request.ProcessId).FirstOrDefaultAsync(cancellationToken: cancellationToken);
             if(process != null && process.Status == ProcessStatuses.CREATED)
             {
                 process.Status = ProcessStatuses.INPROGRESS;
             }
+            
+            var materialsList = new List<Material>();
+            foreach(var material in request.Materials)
+            {
+                materialsList.Add(new Material
+                {
+                    MaterialId = Guid.NewGuid(),
+                    StepId = contentId,
+                    Name = material.Name,
+                    Quantity =  material.Quantity,
+                    UnitOfMeasurement =  material.UnitOfMeasurement,
+                    Supplier = material.Supplier,
+                    Cost = material.Cost,
+                    CreatedAt = DateTimeOffset.Now
+                });
+            }
+            _db.Materials.AddRange(materialsList);
             await _db.SaveChangesAsync();
             var receiverId = process.Request.RequestNavigation.AuthorId;
             await _notificationService.SendNotification("Step has been added", receiverId);

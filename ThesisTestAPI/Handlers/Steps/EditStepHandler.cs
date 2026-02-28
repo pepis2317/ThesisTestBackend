@@ -140,7 +140,7 @@ namespace ThesisTestAPI.Handlers.Steps
                 foreach (var file in request.Images.Where(q => q.Length > 0))
                 {
                     var contentType = file.ContentType;
-                    using var stream = file.OpenReadStream();
+                    await using var stream = file.OpenReadStream();
                     created.Add(new ThesisTestAPI.Entities.Image
                     {
                         ImageId = Guid.NewGuid(),

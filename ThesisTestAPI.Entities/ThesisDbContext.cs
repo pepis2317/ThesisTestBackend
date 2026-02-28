@@ -31,6 +31,8 @@ public partial class ThesisDbContext : DbContext
 
     public virtual DbSet<Like> Likes { get; set; }
 
+    public virtual DbSet<Material> Materials { get; set; }
+
     public virtual DbSet<Message> Messages { get; set; }
 
     public virtual DbSet<MessageAttachment> MessageAttachments { get; set; }
@@ -72,6 +74,7 @@ public partial class ThesisDbContext : DbContext
             optionsBuilder.UseSqlServer("Server=tcp:thesis-db.database.windows.net,1433;Initial Catalog=ThesisDB;Persist Security Info=False;User ID=admin_user;Password=password11!;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;");
         }
     }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Comment>(entity =>
@@ -181,6 +184,21 @@ public partial class ThesisDbContext : DbContext
             entity.HasOne(d => d.LikeNavigation).WithOne(p => p.Like)
                 .HasForeignKey<Like>(d => d.LikeId)
                 .HasConstraintName("FK__Likes__LikeId__4C6B5938");
+        });
+
+        modelBuilder.Entity<Material>(entity =>
+        {
+            entity.HasKey(e => e.MaterialId).HasName("PK__Material__C50610F708B7FF2C");
+
+            entity.Property(e => e.MaterialId).ValueGeneratedNever();
+            entity.Property(e => e.Name).HasMaxLength(255);
+            entity.Property(e => e.Supplier).HasMaxLength(255);
+            entity.Property(e => e.UnitOfMeasurement).HasMaxLength(255);
+
+            entity.HasOne(d => d.Step).WithMany(p => p.Materials)
+                .HasForeignKey(d => d.StepId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK__Materials__StepI__2116E6DF");
         });
 
         modelBuilder.Entity<Message>(entity =>
@@ -594,7 +612,8 @@ public partial class ThesisDbContext : DbContext
             entity.Property(e => e.RowVersion)
                 .IsRowVersion()
                 .IsConcurrencyToken();
-            entity.Property(e => e.SignedAmount).HasComputedColumnSql("(case when [Direction]='C' then [AmountMinor] else  -[AmountMinor] end)", true);
+            entity.Property(e => e.SignedAmount)
+                .HasComputedColumnSql("(case when [Direction]='C' then [AmountMinor] else  -[AmountMinor] end)", true);
             entity.Property(e => e.Status)
                 .HasMaxLength(20)
                 .IsUnicode(false)

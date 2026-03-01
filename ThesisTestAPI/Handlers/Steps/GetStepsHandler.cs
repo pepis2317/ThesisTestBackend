@@ -36,6 +36,8 @@ namespace ThesisTestAPI.Handlers.Steps
                     s.MaxCompleteEstimate,
                     s.Status,
                     s.Amount,
+                    s.CreatedAt,
+                    s.UpdatedAt,
                     Materials = s.Materials
                         .OrderBy(m => m.CreatedAt)
                         .Select(m => new MaterialModel
@@ -63,7 +65,9 @@ namespace ThesisTestAPI.Handlers.Steps
                 MaxCompleteEstimate = s.MaxCompleteEstimate.ToString("dd/MM/yyyy"),
                 Status = s.Status,
                 Price = s.Amount,
-                Materials = s.Materials
+                Materials = s.Materials,
+                CreatedAt = s.CreatedAt.ToString("dd/MM/yyyy"),
+                UpdatedAt = s.UpdatedAt?.ToString("dd/MM/yyyy")
             }).ToList();
 
             return (null, new PaginatedStepsResponse

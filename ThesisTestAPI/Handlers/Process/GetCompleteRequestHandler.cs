@@ -4,29 +4,22 @@ using Microsoft.EntityFrameworkCore;
 using ThesisTestAPI.Entities;
 using ThesisTestAPI.Enum;
 using ThesisTestAPI.Models.Process;
+using ThesisTestAPI.Services;
 
 namespace ThesisTestAPI.Handlers.Process
 {
     public class GetCompleteRequestHandler : IRequestHandler<GetCompleteRequest, (ProblemDetails?, CompleteProcessResponse?)>
     {
-        private readonly ThesisDbContext _db;
-        public GetCompleteRequestHandler(ThesisDbContext db)
+        private readonly ProcessService _service;
+        public GetCompleteRequestHandler(ProcessService service)
         {
-            _db = db;
+            _service = service;
         }
 
         public async Task<(ProblemDetails?, CompleteProcessResponse?)> Handle(GetCompleteRequest request, CancellationToken cancellationToken)
         {
-            var completeRequest = await _db.CompleteProcessRequests.Where(q => q.ProcessId == request.ProcessId && (q.Status == RequestStatuses.PENDING || q.Status == RequestStatuses.ACCEPTED)).OrderByDescending(q=>q.CreatedAt).FirstOrDefaultAsync();
-            if(completeRequest != null)
-            {
-                return (null, new CompleteProcessResponse
-                {
-                    CompleteProcessRequestId = completeRequest.RequestId,
-                    Status = completeRequest.Status,
-                });
-            }
-            return (null, null);
+            var result = await _service.GetCompleteRequest(request);
+            return (null, result);
         }
     }
 }

@@ -152,6 +152,7 @@ namespace ThesisTestAPI.Handlers.Steps
                 }
                 _db.Images.AddRange(created);
             }
+            step.UpdatedAt = DateTimeOffset.Now;
             await _db.SaveChangesAsync();
             return (null, new StepResponse
             {
